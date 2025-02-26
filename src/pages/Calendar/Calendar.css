@@ -1,0 +1,73 @@
+.calendar {
+  padding-top: 100px;
+}
+
+.calendar-container {
+  display: flex;
+  background-color: #1a1c23;
+  color: white;
+  padding: 20px;
+  border-radius: 10px;
+}
+
+.sidebar_calendar {
+  width: 300px;
+  padding: 20px;
+  background-color: #24262d;
+  border-radius: 10px;
+  margin-right: 20px;
+}
+
+.create-event-btn {
+  width: 100%;
+  background-color: #007bff;
+  color: white;
+  padding: 10px;
+  border: none;
+  margin-bottom: 10px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.calendar_p {
+  font-size: 15px;
+}
+
+.event-type {
+  padding: 10px;
+  margin-top: 10px;
+  border-radius: 5px;
+  font-weight: bold;
+}
+
+.new-event {
+  background-color: #1d4d4f;
+}
+.meeting {
+  background-color: #1e3a5f;
+}
+.reports {
+  background-color: #5a4635;
+}
+.theme {
+  background-color: #591c1c;
+}
+
+.calendar-content {
+  flex-grow: 1;
+  background-color: #1e1f29;
+  padding: 20px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+}
+
+.calendar-wrapper {
+  flex-grow: 1;
+}
+
+.event-item {
+  padding: 5px;
+  border-radius: 3px;
+  color: white;
+  font-size: 12px;
+}
