@@ -12,7 +12,6 @@
   width: 100%;
   position: fixed;
   top: 0;
-  z-index: 1000;
 }
 .light_mode .navbar {
   color: var(--light_font_color);

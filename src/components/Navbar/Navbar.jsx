@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import "./Navbar.css";
 import { useContext, useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
@@ -6,11 +7,9 @@ import i18n from "../../i18n.js";
 import en_lang from "../../assets/imgs/en.svg";
 import ar_lang from "../../assets/imgs/ar.svg";
 import de_lang from "../../assets/imgs/de.svg";
-import { IoSearch } from "react-icons/io5";
-import { IoNotificationsOutline } from "react-icons/io5";
+import { IoSearch, IoNotificationsOutline, IoMoonOutline } from "react-icons/io5";
 import { LuFullscreen } from "react-icons/lu";
 import { FiSun } from "react-icons/fi";
-import { IoMoonOutline } from "react-icons/io5";
 import { FaUnlock } from "react-icons/fa";
 import { DataContext } from "../../context/DataContext.jsx";
 // import { FaLock } from "react-icons/fa";
@@ -57,6 +56,8 @@ export default function Navbar() {
     "/": "Dashboard",
     "/chat": "Chat",
     "/calendar": "Calendar",
+    "/projects": "Projects",
+    "/tasks": "Tasks",
   };
 
   // دالة لتحديث اسم الصفحة بناءً على المسار الحالي

@@ -3,11 +3,11 @@ import { useContext } from "react";
 import { Link } from "react-router-dom";
 import logo_dark from "../../assets/imgs/logo-dark.png";
 import logo_light from "../../assets/imgs/logo.png";
+import { DataContext } from "../../context/DataContext";
 import { MdClose } from "react-icons/md";
-import { FaUnlock, FaRegCalendarCheck } from "react-icons/fa";
+import { FaUnlock, FaRegCalendarCheck, FaProjectDiagram, FaTasks } from "react-icons/fa";
 import { AiOutlineDashboard } from "react-icons/ai";
 import { IoChatboxEllipsesOutline } from "react-icons/io5";
-import { DataContext } from "../../context/DataContext";
 
 export default function Sidebar() {
   const { isLightMode, toggleSidebar, sidebarRef } = useContext(DataContext);
@@ -51,6 +51,18 @@ export default function Sidebar() {
               <FaRegCalendarCheck />
             </i>
             <p className="menu_name">Calendar</p>
+          </Link>
+          <Link to="/projects" className="menu_tab" onClick={toggleSidebar}>
+            <i className="menu_icon">
+              <FaProjectDiagram />
+            </i>
+            <p className="menu_name">Projects</p>
+          </Link>
+          <Link to="/tasks" className="menu_tab" onClick={toggleSidebar}>
+            <i className="menu_icon">
+              <FaTasks />
+            </i>
+            <p className="menu_name">Tasks</p>
           </Link>
         </div>
       </div>
