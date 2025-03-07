@@ -1,12 +1,17 @@
 .tasks {
+  height: calc(100vh - 50px);
+  display: flex;
+  flex-direction: column;
   padding-top: 100px;
   overflow: hidden;
 }
 
 .tasks-container {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 20px;
+  overflow: hidden;
 }
 
 /* Header styling */
@@ -66,6 +71,9 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
+  height: 100%;
+  overflow-y: auto;
+  padding-right: 10px;
 }
 
 /* Group Styling */
@@ -91,7 +99,7 @@
 }
 
 .group-name-input {
-  width: 100px;
+  width: 150px;
   color: #c3c3c3;
   background: transparent;
   font-size: 16px;
@@ -138,6 +146,31 @@
   outline: none;
 }
 
+.tasks-table input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  background: transparent;
+  appearance: none;
+  border: 2px solid #c3c3c3;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.tasks-table input[type="checkbox"]:checked {
+  background-color: var(--main_color);
+  position: relative;
+}
+
+.tasks-table input[type="checkbox"]:checked::after {
+  content: "✓";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 15px;
+  font-weight: bold;
+  color: white;
+}
+
 /* Task Input Section */
 .task-input,
 .add-column {
@@ -179,19 +212,134 @@
   cursor: pointer;
 }
 
-
+/* تنسيق قائمة السياق */
 .context-menu {
-  position: absolute;
-  background: rgb(127, 148, 167);
-  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
-  padding: 5px;
-  z-index: 1000;
+  position: fixed;
 }
 
-.context-menu button {
+.context-menu-list {
+  min-width: 200px;
+  position: fixed;
+  background: #2a2a3d;
+  padding: 10px;
+  border-radius: 8px;
+  z-index: 1000;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 15px;
+  color: #c3c3c3;
+  border-radius: 5px;
+  transition: background 0.3s, transform 0.2s;
+  cursor: pointer;
+}
+
+.context-menu-item:hover {
+  background: #3a3a4f;
+  transform: scale(1.01);
+}
+
+/* أيقونات العناصر */
+.context-menu-item i {
+  font-size: 16px;
+  color: #fff;
+}
+
+/* تنسيق خاص لعناصر الحذف */
+.context-menu-item.delete {
+  color: #ff4c4c;
+}
+
+.context-menu-item.delete:hover {
+  background: rgba(255, 76, 76, 0.2);
+}
+
+/* Popup Delete Task and group */
+.popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 100%;
-  background: none;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.popup {
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.delete-popup {
+  background: #2a2a3d;
+}
+.delete-popup h3 {
+  font-size: 22px;
+}
+
+.success-popup {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  background: #e3ffe3;
+  color: #2e7d32;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  transform: translateX(-50%);
+  transition: all 0.5s;
+}
+
+.delete-popup-p {
+  margin-top: 10px;
+}
+
+.popup-buttons {
+  display: flex;
+  justify-content: right;
+  align-items: center;
+  gap: 10px;
+}
+
+.delete-button {
+  margin-top: 15px;
+}
+
+.popup-buttons button {
+  padding: 8px 12px;
   border: none;
-  padding: 8px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.cancel-btn {
+  background: #ccc;
+  color: black;
+}
+
+.delete-btn {
+  background: var(--main_color);
+  color: white;
+}
+
+.undo-btn {
+  background: green;
+  color: white;
+}
+
+.close-btn {
+  display: flex;
+  background: transparent;
+  font-size: 20px;
   cursor: pointer;
 }

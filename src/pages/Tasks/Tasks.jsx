@@ -1,5 +1,4 @@
 import "./Tasks.css";
-import { useEffect, useRef, useState } from "react";
 import Modal from "react-modal";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import {
@@ -8,359 +7,46 @@ import {
   FaChevronDown,
   FaChevronRight,
 } from "react-icons/fa";
+import { IoMdClose } from "react-icons/io";
+import { useContext } from "react";
+import { TasksContext } from "../../context/TasksContext";
 
 export default function Tasks() {
-  const inputRef = useRef(null);
-  const historyRef = useRef([]);
-
-  const [searchTerm, setSearchTerm] = useState("");
-  const [modalIsOpen, setModalIsOpen] = useState(false);
-
-  const [selectedTasks, setSelectedTasks] = useState(new Set());
-  const [contextMenu, setContextMenu] = useState(null);
-
-  const [groups, setGroups] = useState(() => {
-    const savedGroups = localStorage.getItem("taskGroups");
-    return savedGroups
-      ? JSON.parse(savedGroups)
-      : [
-          {
-            name: "Group One",
-            tasks: [
-              {
-                id: 1,
-                name: "Task 1",
-                status: "Not Started",
-                dueDate: "",
-                owner: "",
-              },
-              {
-                id: 2,
-                name: "Task 2",
-                status: "Done",
-                dueDate: "Jan 22",
-                owner: "",
-              },
-            ],
-            columns: [
-              "Select",
-              "Task",
-              "Status",
-              "Progress",
-              "Due Date",
-              "Priority",
-              "Notes",
-              "Budget",
-              "Files",
-              "Timeline",
-              "Last updated",
-              "Dependent On",
-              "Rating",
-            ],
-          },
-          {
-            name: "Group Two",
-            tasks: [
-              {
-                id: 1,
-                name: "Task 1",
-                status: "Not Started",
-                dueDate: "",
-                owner: "",
-              },
-              {
-                id: 2,
-                name: "Task 2",
-                status: "Done",
-                dueDate: "Jan 22",
-                owner: "",
-              },
-            ],
-            columns: [
-              "Select",
-              "Task",
-              "Status",
-              "Progress",
-              "Due Date",
-              "Priority",
-              "Notes",
-              "Budget",
-              "Files",
-              "Timeline",
-              "Last updated",
-              "Dependent On",
-              "Rating",
-            ],
-          },
-          {
-            name: "Group Three",
-            tasks: [
-              {
-                id: 1,
-                name: "Task 1",
-                status: "Not Started",
-                dueDate: "",
-                owner: "",
-              },
-              {
-                id: 2,
-                name: "Task 2",
-                status: "Done",
-                dueDate: "Jan 22",
-                owner: "",
-              },
-            ],
-            columns: [
-              "Select",
-              "Task",
-              "Status",
-              "Progress",
-              "Due Date",
-              "Priority",
-              "Notes",
-              "Budget",
-              "Files",
-              "Timeline",
-              "Last updated",
-              "Dependent On",
-              "Rating",
-            ],
-          },
-        ];
-  });
-
-  const [tasks, setTasks] = useState(() => {
-    const savedTasks = localStorage.getItem("tasks");
-    return savedTasks ? JSON.parse(savedTasks) : {};
-  });
-
-  const [expandedGroups, setExpandedGroups] = useState(() => {
-    return groups.reduce((acc, group) => {
-      acc[group.name] = true; // جميع المجموعات مفتوحة افتراضيًا
-      return acc;
-    }, {});
-  });
-
-  useEffect(() => {
-    localStorage.setItem("taskGroups", JSON.stringify(groups));
-    localStorage.setItem("tasks", JSON.stringify(tasks));
-  }, [groups, tasks]);
-
-  historyRef.current.push({
-    groups: JSON.parse(JSON.stringify(groups)),
-    tasks: JSON.parse(JSON.stringify(tasks)),
-  });
-
-  const handleTaskSelection = (taskId, groupName, isRightClick = false) => {
-    setSelectedTasks((prev) => {
-      const updated = new Set();
-
-      const uniqueTaskId = `${groupName}-${taskId}`;
-
-      if (isRightClick) {
-        // عند الضغط كليك يمين، يجب تحديد هذه المهمة فقط
-        updated.add(uniqueTaskId);
-      } else {
-        // عند الضغط كليك يسار، نضيف أو نزيل التحديد
-        if (prev.has(uniqueTaskId)) {
-          prev.delete(uniqueTaskId);
-        } else {
-          prev.add(uniqueTaskId);
-        }
-      }
-
-      return updated;
-    });
-  };
-
-  const toggleSelectAll = (groupName) => {
-    setSelectedTasks((prev) => {
-      const updated = new Set(prev);
-      const groupTasks =
-        groups
-          .find((group) => group.name === groupName)
-          ?.tasks.map((task) => `${groupName}-${task.id}`) || [];
-
-      const allSelected = groupTasks.every((id) => updated.has(id));
-
-      if (allSelected) {
-        groupTasks.forEach((id) => updated.delete(id)); // إزالة التحديد
-      } else {
-        groupTasks.forEach((id) => updated.add(id)); // تحديد جميع المهام
-      }
-
-      return updated;
-    });
-  };
-
-  const addTask = (groupName) => {
-    const newTask = {
-      id: Date.now(),
-      group: groupName,
-      data: {},
-    };
-
-    setTasks((prevTasks) => ({
-      ...prevTasks,
-      [newTask.id]: newTask,
-    }));
-
-    setGroups((prevGroups) =>
-      prevGroups.map((group) =>
-        group.name === groupName
-          ? { ...group, tasks: [...group.tasks, newTask] }
-          : group
-      )
-    );
-  };
-
-  const deleteTask = (taskId) => {
-    setGroups((prevGroups) => {
-      // حفظ النسخة الحالية قبل حذف المهمة
-      historyRef.current.push({
-        groups: JSON.parse(JSON.stringify(prevGroups)),
-        tasks: JSON.parse(JSON.stringify(tasks)),
-      });
-
-      return prevGroups.map((group) => ({
-        ...group,
-        tasks: group.tasks.filter((task) => task.id !== taskId),
-      }));
-    });
-
-    setTasks((prevTasks) => {
-      const updatedTasks = { ...prevTasks };
-      delete updatedTasks[taskId]; // حذف المهمة من كائن المهام
-      return updatedTasks;
-    });
-
-    setContextMenu(null); // إخفاء القائمة بعد الحذف
-  };
-
-  const deleteGroup = (groupName) => {
-    setGroups((prevGroups) => {
-      // حفظ النسخة الحالية قبل حذف المجموعة
-      historyRef.current.push({
-        groups: JSON.parse(JSON.stringify(prevGroups)),
-        tasks: JSON.parse(JSON.stringify(tasks)),
-      });
-
-      return prevGroups.filter((group) => group.name !== groupName);
-    });
-
-    setContextMenu(null); // إخفاء القائمة بعد الحذف
-  };
-
-  useEffect(() => {
-    const handleClickOutside = () => setContextMenu(null);
-    document.addEventListener("click", handleClickOutside);
-    return () => document.removeEventListener("click", handleClickOutside);
-  }, []);
-
-  useEffect(() => {
-    const handleUndo = (event) => {
-      if (event.ctrlKey && event.key === "z") {
-        event.preventDefault(); // منع السلوك الافتراضي للمتصفح
-
-        if (historyRef.current.length > 0) {
-          const lastState = historyRef.current.pop(); // استرجاع آخر نسخة مخزنة
-          setGroups(lastState.groups);
-          setTasks(lastState.tasks);
-        }
-      }
-    };
-
-    document.addEventListener("keydown", handleUndo);
-    return () => {
-      document.removeEventListener("keydown", handleUndo);
-    };
-  }, []);
-
-  const addGroup = () => {
-    const groupName = prompt("Enter group name:");
-    if (!groupName) return; // إذا لم يتم إدخال اسم، لا تقم بإنشاء المجموعة
-
-    const newGroup = {
-      name: groupName,
-      tasks: [],
-      columns: [
-        "Select",
-        "Task",
-        "Status",
-        "Progress",
-        "Due Date",
-        "Priority",
-        "Notes",
-        "Budget",
-        "Files",
-        "Timeline",
-        "Last updated",
-        "Dependent On",
-        "Rating",
-      ],
-    };
-
-    setGroups((prevGroups) => [...prevGroups, newGroup]);
-  };
-
-  const handleDragEnd = (result) => {
-    if (!result.destination) return;
-
-    const { source, destination, type } = result;
-
-    if (type === "group") {
-      // إعادة ترتيب المجموعات عند سحبها
-      const newGroups = [...groups];
-      const [movedGroup] = newGroups.splice(source.index, 1);
-      newGroups.splice(destination.index, 0, movedGroup);
-      setGroups(newGroups);
-    } else if (type === "task") {
-      setGroups((prevGroups) => {
-        let movedTask = null;
-        let taskColumns = [];
-
-        const updatedGroups = prevGroups.map((group) => {
-          if (group.name === source.droppableId) {
-            // إزالة المهمة من المجموعة الأصلية
-            const filteredTasks = [...group.tasks];
-            movedTask = filteredTasks.splice(source.index, 1)[0];
-            taskColumns = group.columns; // حفظ ترتيب الأعمدة
-            return { ...group, tasks: filteredTasks };
-          }
-          return group;
-        });
-
-        if (!movedTask) return prevGroups; // التأكد من وجود المهمة
-
-        return updatedGroups.map((group) => {
-          if (group.name === destination.droppableId) {
-            // إضافة المهمة إلى الموضع المحدد
-            const updatedTasks = [...group.tasks];
-            updatedTasks.splice(destination.index, 0, movedTask);
-
-            // الاحتفاظ بترتيب الأعمدة كما هو
-            return { ...group, tasks: updatedTasks, columns: taskColumns };
-          }
-          return group;
-        });
-      });
-    }
-  };
-
-  const updateGroupName = (groupIndex, newName) => {
-    setGroups((prevGroups) => {
-      const updatedGroups = [...prevGroups];
-      updatedGroups[groupIndex].name = newName;
-      return updatedGroups;
-    });
-  };
-
-  const toggleGroup = (groupName) => {
-    setExpandedGroups((prev) => ({
-      ...prev,
-      [groupName]: !prev[groupName],
-    }));
-  };
+  const {
+    inputRef,
+    searchTerm,
+    setSearchTerm,
+    modalIsOpen,
+    setModalIsOpen,
+    selectedTasks,
+    contextMenu,
+    groups,
+    setGroups,
+    showDeletePopup,
+    setShowDeletePopup,
+    showDeletedMessage,
+    setShowDeletedMessage,
+    showGroupDeletePopup,
+    setShowGroupDeletePopup,
+    showGroupDeletedMessage,
+    setShowGroupDeletedMessage,
+    expandedGroups,
+    handleTaskSelection,
+    toggleSelectAll,
+    addTask,
+    confirmDeleteTask,
+    undoDeleteLast,
+    deletedItemType,
+    confirmDeleteGroup,
+    undoDeleteGroup,
+    addGroup,
+    handleDragEnd,
+    updateGroupName,
+    toggleGroup,
+    contextMenuOptions,
+    handleContextMenu,
+    handleTaskNameChange,
+  } = useContext(TasksContext);
 
   return (
     <div className="container">
@@ -397,6 +83,7 @@ export default function Tasks() {
           </Modal>
 
           <DragDropContext onDragEnd={handleDragEnd}>
+            {/* Droppable الرئيسي للمجموعات */}
             <Droppable droppableId="all-groups" type="group">
               {(provided) => (
                 <div
@@ -406,8 +93,8 @@ export default function Tasks() {
                 >
                   {groups.map((group, index) => (
                     <Draggable
-                      key={group.name}
-                      draggableId={group.name}
+                      key={`group-${group.name}`}
+                      draggableId={`group-${group.name}`}
                       index={index}
                     >
                       {(provided) => (
@@ -418,18 +105,11 @@ export default function Tasks() {
                         >
                           <div
                             className="group-header"
-                            {...provided.dragHandleProps}
-                            onContextMenu={(e) => {
-                              e.preventDefault();
-                              setContextMenu({
-                                x: e.pageX,
-                                y: e.pageY,
-                                type: "group",
-                                groupName: group.name,
-                              });
-                            }}
+                            {...provided.dragHandleProps} // ✅ يسمح بسحب المجموعة
+                            onContextMenu={(e) =>
+                              handleContextMenu(e, "group", null, group.name)
+                            }
                           >
-                            {/* زر التوسيع/التصغير */}
                             <i
                               className="toggle_btn"
                               onClick={() => toggleGroup(group.name)}
@@ -449,12 +129,16 @@ export default function Tasks() {
                               onBlur={(e) =>
                                 updateGroupName(index, e.target.value)
                               }
-                              onMouseDown={(e) => e.stopPropagation()} // تعطيل السحب أثناء الكتابة
+                              onMouseDown={(e) => e.stopPropagation()}
                             />
                           </div>
 
+                          {/* Droppable للمهام داخل كل مجموعة */}
                           {expandedGroups[group.name] && (
-                            <Droppable droppableId={group.name} type="task">
+                            <Droppable
+                              droppableId={`group-${group.name}`}
+                              type="task"
+                            >
                               {(provided) => (
                                 <table
                                   className="tasks-table"
@@ -467,38 +151,34 @@ export default function Tasks() {
                                         <input
                                           type="checkbox"
                                           checked={
-                                            groups
-                                              .find(
-                                                (group) =>
-                                                  group.name === group.name
+                                            group.tasks?.length > 0 &&
+                                            group.tasks.every((task) =>
+                                              selectedTasks.has(
+                                                `${group.name}-${task.id}`
                                               )
-                                              ?.tasks.every((task) =>
-                                                selectedTasks.has(
-                                                  `${group.name}-${task.id}`
-                                                )
-                                              ) &&
-                                            groups.find(
-                                              (group) =>
-                                                group.name === group.name
-                                            )?.tasks.length > 0
+                                            )
                                           }
                                           onChange={() =>
                                             toggleSelectAll(group.name)
                                           }
                                         />
                                       </th>
-                                      {group.columns
-                                        .slice(1)
-                                        .map((col, colIndex) => (
-                                          <th key={colIndex}>{col}</th>
-                                        ))}
+                                      {Array.isArray(group.columns) ? (
+                                        group.columns
+                                          .slice(1)
+                                          .map((col, colIndex) => (
+                                            <th key={colIndex}>{col}</th>
+                                          ))
+                                      ) : (
+                                        <th>No Columns</th>
+                                      )}
                                     </tr>
                                   </thead>
                                   <tbody>
                                     {group.tasks.map((task, taskIndex) => (
                                       <Draggable
-                                        key={String(task.id)}
-                                        draggableId={String(task.id)}
+                                      key={`task-${String(task.id)}-${taskIndex}`}
+                                      draggableId={`task-${String(task.id)}`}
                                         index={taskIndex}
                                       >
                                         {(provided) => (
@@ -506,21 +186,14 @@ export default function Tasks() {
                                             ref={provided.innerRef}
                                             {...provided.draggableProps}
                                             {...provided.dragHandleProps}
-                                            onContextMenu={(e) => {
-                                              e.preventDefault(); // منع القائمة الافتراضية للمتصفح
-                                              handleTaskSelection(
+                                            onContextMenu={(e) =>
+                                              handleContextMenu(
+                                                e,
+                                                "task",
                                                 task.id,
-                                                group.name,
-                                                true
-                                              ); // كليك يمين
-                                              setContextMenu({
-                                                x: e.pageX,
-                                                y: e.pageY,
-                                                type: "task",
-                                                taskId: task.id,
-                                                groupName: group.name,
-                                              });
-                                            }}
+                                                group.name
+                                              )
+                                            }
                                             className={
                                               selectedTasks.has(
                                                 `${group.name}-${task.id}`
@@ -546,29 +219,13 @@ export default function Tasks() {
                                             <td>
                                               <input
                                                 type="text"
-                                                value={task.name}
-                                                onChange={(e) => {
-                                                  setGroups((prevGroups) =>
-                                                    prevGroups.map((g) =>
-                                                      g.name === group.name
-                                                        ? {
-                                                            ...g,
-                                                            tasks: g.tasks.map(
-                                                              (t) =>
-                                                                t.id === task.id
-                                                                  ? {
-                                                                      ...t,
-                                                                      name: e
-                                                                        .target
-                                                                        .value,
-                                                                    }
-                                                                  : t
-                                                            ),
-                                                          }
-                                                        : g
-                                                    )
-                                                  );
-                                                }}
+                                                value={task.name ?? ""}
+                                                onChange={(e) =>
+                                                  handleTaskNameChange(
+                                                    e,
+                                                    task.id
+                                                  )
+                                                }
                                               />
                                             </td>
                                             {group.columns
@@ -625,6 +282,7 @@ export default function Tasks() {
                               )}
                             </Droppable>
                           )}
+
                           <button
                             className="add_task"
                             onClick={() => addTask(group.name)}
@@ -648,21 +306,105 @@ export default function Tasks() {
           {contextMenu && (
             <div
               className="context-menu"
-              style={{ top: contextMenu.y, left: contextMenu.x }}
+              style={{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }}
             >
-              {contextMenu.type === "task" ? (
+              {contextMenuOptions}
+            </div>
+          )}
+
+          {/* Popup تأكيد الحذف */}
+          {showDeletePopup && (
+            <div className="popup-overlay">
+              <div className="popup delete-popup">
+                <h3>Delete this task?</h3>
+                <p className="delete-popup-p">
+                  We will keep it in your trash for 30 days, and then
+                  permanently delete it.
+                </p>
+                <div className="delete-button popup-buttons">
+                  <button
+                    className="cancel-btn"
+                    onClick={() => setShowDeletePopup(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button className="delete-btn" onClick={confirmDeleteTask}>
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* إشعار الحذف مع Undo */}
+          {showDeletedMessage && (
+            <div className="popup success-popup">
+              <p>
+                {deletedItemType === "Task"
+                  ? "We successfully deleted the Task"
+                  : "We successfully deleted the Group"}
+              </p>
+              <div className="success-btn popup-buttons">
+                <button className="undo-btn" onClick={undoDeleteLast}>
+                  Undo
+                </button>
                 <button
-                  onClick={() =>
-                    deleteTask(contextMenu.taskId, contextMenu.groupName)
-                  }
+                  className="close-btn"
+                  onClick={() => setShowDeletedMessage(null)}
                 >
-                  Delete Task
+                  <i>
+                    <IoMdClose />
+                  </i>
                 </button>
-              ) : (
-                <button onClick={() => deleteGroup(contextMenu.groupName)}>
-                  Delete Group
+              </div>
+            </div>
+          )}
+
+          {/* Popup تأكيد حذف المجموعة */}
+          {showGroupDeletePopup && (
+            <div className="popup-overlay">
+              <div className="popup delete-popup">
+                <h3>Delete this group?</h3>
+                <p className="delete-popup-p">
+                  We will keep it in your trash for 30 days, and then
+                  permanently delete it.
+                </p>
+                <div className="delete-button popup-buttons">
+                  <button
+                    className="cancel-btn"
+                    onClick={() => setShowGroupDeletePopup(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button className="delete-btn" onClick={confirmDeleteGroup}>
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* إشعار حذف المجموعة مع تأثير ناعم */}
+          {showGroupDeletedMessage && (
+            <div
+              className={`popup success-popup ${
+                showGroupDeletedMessage ? "show" : ""
+              }`}
+            >
+              <p>We successfully deleted the Group</p>
+              <div className="popup-buttons">
+                <button className="undo-btn" onClick={undoDeleteGroup}>
+                  Undo
                 </button>
-              )}
+                <button
+                  className="close-btn"
+                  onClick={() => setShowGroupDeletedMessage(false)}
+                >
+                  <i>
+                    <IoMdClose />
+                  </i>
+                </button>
+              </div>
             </div>
           )}
         </div>

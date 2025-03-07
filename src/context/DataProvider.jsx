@@ -38,6 +38,8 @@ export default function DataProvider({ children }) {
     };
   }, []);
 
+  
+
   return (
     <DataContext.Provider
       value={{ isLightMode, toggleMode, toggleSidebar, sidebarRef }}
