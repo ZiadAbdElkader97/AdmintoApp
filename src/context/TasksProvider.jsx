@@ -20,128 +20,208 @@ export default function TasksProvider({ children }) {
   const [showDeletedMessage, setShowDeletedMessage] = useState(false);
 
   const [deletedItems, setDeletedItems] = useState([]);
+  const [hiddenColumns, setHiddenColumns] = useState([]);
 
   const [groupToDelete, setGroupToDelete] = useState(null);
   const [showGroupDeletePopup, setShowGroupDeletePopup] = useState(false);
   const [showGroupDeletedMessage, setShowGroupDeletedMessage] = useState(false);
 
+  const initialColumns = [
+    { id: "task", name: "Task", visible: true, width: "180px" },
+    { id: "status", name: "Status", visible: true, width: "100px" },
+    { id: "progress", name: "Progress", visible: true, width: "150px" },
+    { id: "date", name: "Due Date", visible: true, width: "120px" },
+    { id: "priority", name: "Priority", visible: true, width: "100px" },
+    { id: "notes", name: "Notes", visible: true, width: "180px" },
+    { id: "budget", name: "Budget", visible: true, width: "100px" },
+    { id: "files", name: "Files", visible: true, width: "140px" },
+    { id: "timeline", name: "Timeline", visible: true, width: "120px" },
+    { id: "updated", name: "Last updated", visible: true, width: "120px" },
+    { id: "dependent", name: "Dependent On", visible: true, width: "130px" },
+    { id: "rating", name: "Rating", visible: true, width: "80px" },
+  ];
+
+  const initialTasks = [
+    {
+      id: "1",
+      task: "Task One",
+      status: "To Do",
+      progress: "0%",
+      date: "2025-03-15",
+      priority: "High",
+      notes: "",
+      budget: "$1000",
+      files: "",
+      timeline: "",
+      updated: "2025-03-10",
+      dependent: "",
+      rating: "5⭐",
+    },
+    {
+      id: "2",
+      task: "Task Two",
+      status: "In Progress",
+      progress: "50%",
+      date: "2025-03-20",
+      priority: "Medium",
+      notes: "",
+      budget: "$2000",
+      files: "",
+      timeline: "",
+      updated: "2025-03-11",
+      dependent: "",
+      rating: "4⭐",
+    },
+    {
+      id: "3",
+      task: "Task Three",
+      status: "Done",
+      progress: "100%",
+      date: "2025-03-25",
+      priority: "Low",
+      notes: "",
+      budget: "$1500",
+      files: "",
+      timeline: "",
+      updated: "2025-03-12",
+      dependent: "",
+      rating: "5⭐",
+    },
+  ];
+
+  const initialGroups = [
+    {
+      name: "Group One",
+      tasks: [],
+      columns: [
+        "Select",
+        "Task",
+        "Status",
+        "Progress",
+        "Due Date",
+        "Priority",
+        "Notes",
+        "Budget",
+        "Files",
+        "Timeline",
+        "Last updated",
+        "Dependent On",
+        "Rating",
+      ],
+    },
+    {
+      name: "Group Two",
+      tasks: [],
+      columns: [
+        "Select",
+        "Task",
+        "Status",
+        "Progress",
+        "Due Date",
+        "Priority",
+        "Notes",
+        "Budget",
+        "Files",
+        "Timeline",
+        "Last updated",
+        "Dependent On",
+        "Rating",
+      ],
+    },
+    {
+      name: "Group Three",
+      tasks: [],
+      columns: [
+        "Select",
+        "Task",
+        "Status",
+        "Progress",
+        "Due Date",
+        "Priority",
+        "Notes",
+        "Budget",
+        "Files",
+        "Timeline",
+        "Last updated",
+        "Dependent On",
+        "Rating",
+      ],
+    },
+  ];
+
   const [groups, setGroups] = useState(() => {
-    const savedGroups = localStorage.getItem("taskGroups");
-    return savedGroups
-      ? JSON.parse(savedGroups)
-      : [
-          {
-            name: "Group One",
-            tasks: [
-              {
-                id: 1,
-                name: "Task 1",
-                status: "Not Started",
-                dueDate: "",
-                owner: "",
-              },
-              {
-                id: 2,
-                name: "Task 2",
-                status: "Done",
-                dueDate: "Jan 22",
-                owner: "",
-              },
-            ],
-            columns: [
-              "Select",
-              "Task",
-              "Status",
-              "Progress",
-              "Due Date",
-              "Priority",
-              "Notes",
-              "Budget",
-              "Files",
-              "Timeline",
-              "Last updated",
-              "Dependent On",
-              "Rating",
-            ],
-          },
-          {
-            name: "Group Two",
-            tasks: [
-              {
-                id: 1,
-                name: "Task 1",
-                status: "Not Started",
-                dueDate: "",
-                owner: "",
-              },
-              {
-                id: 2,
-                name: "Task 2",
-                status: "Done",
-                dueDate: "Jan 22",
-                owner: "",
-              },
-            ],
-            columns: [
-              "Select",
-              "Task",
-              "Status",
-              "Progress",
-              "Due Date",
-              "Priority",
-              "Notes",
-              "Budget",
-              "Files",
-              "Timeline",
-              "Last updated",
-              "Dependent On",
-              "Rating",
-            ],
-          },
-          {
-            name: "Group Three",
-            tasks: [
-              {
-                id: 1,
-                name: "Task 1",
-                status: "Not Started",
-                dueDate: "",
-                owner: "",
-              },
-              {
-                id: 2,
-                name: "Task 2",
-                status: "Done",
-                dueDate: "Jan 22",
-                owner: "",
-              },
-            ],
-            columns: [
-              "Select",
-              "Task",
-              "Status",
-              "Progress",
-              "Due Date",
-              "Priority",
-              "Notes",
-              "Budget",
-              "Files",
-              "Timeline",
-              "Last updated",
-              "Dependent On",
-              "Rating",
-            ],
-          },
-        ];
+    const storedGroups = JSON.parse(localStorage.getItem("taskGroups"));
+    if (
+      storedGroups &&
+      Array.isArray(storedGroups) &&
+      storedGroups.length > 0
+    ) {
+      return storedGroups;
+    } else {
+      const defaultGroups = [
+        {
+          name: "Group One",
+          tasks: initialTasks.map((task) => ({
+            ...task,
+            id: `group1-${task.id}`,
+          })),
+        },
+        {
+          name: "Group Two",
+          tasks: initialTasks.map((task) => ({
+            ...task,
+            id: `group2-${task.id}`,
+          })),
+        },
+        {
+          name: "Group Three",
+          tasks: initialTasks.map((task) => ({
+            ...task,
+            id: `group3-${task.id}`,
+          })),
+        },
+      ];
+      localStorage.setItem("taskGroups", JSON.stringify(defaultGroups)); // ✅ حفظ القيم الافتراضية
+      return defaultGroups;
+    }
+  });
+
+  // تحميل البيانات من LocalStorage أو استخدام القيم الافتراضية
+  const [columns, setColumns] = useState(() => {
+    const storedColumns = JSON.parse(localStorage.getItem("tasks_columns"));
+    return storedColumns && Array.isArray(storedColumns)
+      ? storedColumns
+      : initialColumns;
   });
 
   const [tasks, setTasks] = useState(() => {
-    const savedTasks = localStorage.getItem("tasks");
-    return savedTasks ? JSON.parse(savedTasks) : {};
+    const storedTasks = JSON.parse(localStorage.getItem("tasks_data"));
+    if (storedTasks && Array.isArray(storedTasks) && storedTasks.length > 0) {
+      return storedTasks; // ✅ تحميل البيانات المحفوظة في `localStorage` إن وجدت
+    } else {
+      localStorage.setItem("tasks_data", JSON.stringify(initialTasks)); // ✅ تخزين المهام الافتراضية في `localStorage`
+      return initialTasks;
+    }
   });
 
+  useEffect(() => {
+    localStorage.setItem("tasks_columns", JSON.stringify(columns));
+  }, [columns]);
+
+  useEffect(() => {
+    if (tasks.length > 0) {
+      localStorage.setItem("tasks_data", JSON.stringify(tasks));
+    }
+  }, [tasks]);
+
+  useEffect(() => {
+    if (groups && groups.length > 0) {
+      localStorage.setItem("taskGroups", JSON.stringify(groups));
+    }
+  }, [groups]);
+
   const [expandedGroups, setExpandedGroups] = useState(() => {
-    return groups.reduce((acc, group) => {
+    return initialGroups.reduce((acc, group) => {
       acc[group.name] = true; // جميع المجموعات مفتوحة افتراضيًا
       return acc;
     }, {});
@@ -153,72 +233,81 @@ export default function TasksProvider({ children }) {
     }
   }, [groups]);
 
-  useEffect(() => {
-    if (tasks && Object.keys(tasks).length > 0) {
-      localStorage.setItem("tasks", JSON.stringify(tasks));
-    }
-  }, [tasks]);
-
   const handleTaskSelection = (taskId, groupName, isRightClick = false) => {
-    setSelectedTasks((prev) => {
-      const updated = new Set(prev);
-      const uniqueTaskId = `${groupName}-${taskId}`;
+    setSelectedTasks((prevSelected) => {
+      const updatedSelection = new Set(prevSelected);
 
       if (isRightClick) {
-        // عند الضغط كليك يمين، يتم تحديد هذه المهمة فقط
-        updated.clear();
-        updated.add(uniqueTaskId);
+        // ✅ عند الضغط كليك يمين، يتم تحديد هذه المهمة فقط
+        updatedSelection.clear();
+        updatedSelection.add(taskId);
       } else {
-        // عند الضغط كليك يسار، يتم التبديل بين التحديد والإلغاء
-        if (updated.has(uniqueTaskId)) {
-          updated.delete(uniqueTaskId);
+        // ✅ عند الضغط العادي، يتم التبديل بين التحديد والإلغاء
+        if (updatedSelection.has(taskId)) {
+          updatedSelection.delete(taskId);
         } else {
-          updated.add(uniqueTaskId);
+          updatedSelection.add(taskId);
         }
       }
 
-      return new Set(updated); // إرجاع نسخة جديدة لضمان التحديث
+      return updatedSelection;
     });
   };
 
   const toggleSelectAll = (groupName) => {
-    setSelectedTasks((prev) => {
-      const updated = new Set(prev);
-      const groupTasks =
-        groups
-          .find((group) => group.name === groupName)
-          ?.tasks.map((task) => `${groupName}-${task.id}`) || [];
+    setSelectedTasks((prevSelected) => {
+      const group = groups.find((g) => g.name === groupName);
+      if (!group) return prevSelected;
 
-      const allSelected = groupTasks.every((id) => updated.has(id));
+      const allTaskIds = group.tasks.map((task) => task.id);
+      const allSelected = allTaskIds.every((taskId) =>
+        prevSelected.has(taskId)
+      );
+
+      const updatedSelection = new Set(prevSelected);
 
       if (allSelected) {
-        groupTasks.forEach((id) => updated.delete(id)); // إزالة التحديد
+        // ✅ إذا كانت كل المهام محددة، قم بإلغاء تحديدها جميعًا
+        allTaskIds.forEach((taskId) => updatedSelection.delete(taskId));
       } else {
-        groupTasks.forEach((id) => updated.add(id)); // تحديد جميع المهام
+        // ✅ إذا لم تكن كل المهام محددة، قم بتحديدها جميعًا
+        allTaskIds.forEach((taskId) => updatedSelection.add(taskId));
       }
 
-      return updated;
+      return updatedSelection;
     });
   };
 
   const addTask = (groupName) => {
-    const newTask = {
-      id: Date.now(),
-      group: groupName,
-      data: {},
-    };
-
-    setTasks((prevTasks) => ({
-      ...prevTasks,
-      [newTask.id]: newTask,
-    }));
-
     setGroups((prevGroups) =>
-      prevGroups.map((group) =>
-        group.name === groupName
-          ? { ...group, tasks: [...group.tasks, newTask] }
-          : group
-      )
+      prevGroups.map((group) => {
+        if (group.name === groupName) {
+          const lastTask =
+            group.tasks.length > 0
+              ? group.tasks[group.tasks.length - 1] // ✅ احصل على آخر مهمة
+              : initialTasks[0]; // ✅ إذا لم يكن هناك مهام، استخدم أول مهمة من `initialTasks`
+
+          const newTask = {
+            ...lastTask,
+            id: `task-${Date.now()}`,
+            task: "New Task",
+            status: "To Do",
+            progress: "0%",
+            date: new Date().toISOString().split("T")[0],
+            priority: lastTask.priority || "Medium",
+            notes: lastTask.notes || "",
+            budget: "$0",
+            files: lastTask.files || "",
+            timeline: lastTask.timeline || "",
+            updated: new Date().toISOString().split("T")[0],
+            dependent: lastTask.dependent || "",
+            rating: "0⭐",
+          };
+
+          return { ...group, tasks: [...group.tasks, newTask] };
+        }
+        return group;
+      })
     );
   };
 
@@ -233,46 +322,53 @@ export default function TasksProvider({ children }) {
 
     setTimeout(() => {
       setShowDeletedMessage(false);
-      setDeletedItemType(null);
+      setTimeout(() => setDeletedItemType(null), 500); // ✅ تأخير تصفير `deletedItemType` بعد إغلاق الإشعار
     }, 10000);
   };
 
   const confirmDeleteTask = () => {
     if (!taskToDelete) return;
 
-    const group = groups.find((g) => g.name === taskToDelete.groupName);
-    if (!group) return;
-
-    const taskIndex = group.tasks.findIndex(
-      (t) => t.id === taskToDelete.taskId
-    );
-    if (taskIndex === -1) return;
-
-    const taskToRestore = group.tasks[taskIndex];
-
-    setDeletedItems((prev) => [
-      ...prev,
-      {
-        type: "Task",
-        data: {
-          ...taskToDelete,
-          task: { ...taskToRestore, id: taskToRestore.id || Date.now() },
-          index: taskIndex,
-        },
-      }, // ✅ ضمان وجود ID
-    ]);
+    let deletedTask = null; // ✅ تعريف المتغير خارج `setGroups`
+    let taskIndex = -1; // ✅ تعريف `taskIndex` لضمان وجوده
 
     setGroups((prevGroups) =>
-      prevGroups.map((g) =>
-        g.name === taskToDelete.groupName
-          ? { ...g, tasks: g.tasks.filter((t) => t.id !== taskToDelete.taskId) }
-          : g
-      )
+      prevGroups.map((group) => {
+        if (group.name === taskToDelete.groupName) {
+          taskIndex = group.tasks.findIndex(
+            (t) => t.id === taskToDelete.taskId
+          );
+          if (taskIndex === -1) return group;
+
+          deletedTask = group.tasks[taskIndex]; // ✅ حفظ بيانات المهمة المحذوفة
+
+          return {
+            ...group,
+            tasks: group.tasks.filter((t) => t.id !== taskToDelete.taskId),
+          };
+        }
+        return group;
+      })
     );
 
+    if (deletedTask) {
+      setDeletedItems((prev) => [
+        ...prev,
+        {
+          type: "Task",
+          data: {
+            ...deletedTask, // ✅ حفظ كل بيانات المهمة الفعلية
+            groupName: taskToDelete.groupName, // ✅ تأكيد حفظ اسم المجموعة
+            index: taskIndex, // ✅ حفظ موقع المهمة في المجموعة
+          },
+        },
+      ]);
+    }
+
     setShowDeletePopup(false);
-    showDeleteNotification("Task");
+    showDeleteNotification("Task"); // ✅ عرض الإشعار
   };
+
   const deleteGroup = (groupName) => {
     const group = groups.find((g) => g.name === groupName);
     if (!group) return;
@@ -313,8 +409,8 @@ export default function TasksProvider({ children }) {
   const undoDeleteLast = () => {
     if (!deletedItems || deletedItems.length === 0) return; // ✅ تحقق من أن هناك عناصر محذوفة
 
-    const lastDeleted = deletedItems[deletedItems.length - 1];
-    setDeletedItems((prev) => prev.slice(0, -1));
+    const lastDeleted = deletedItems[deletedItems.length - 1]; // ✅ احصل على آخر عنصر محذوف
+    setDeletedItems((prev) => prev.slice(0, -1)); // ✅ إزالة العنصر من قائمة المحذوفات
 
     if (!lastDeleted || !lastDeleted.data) return;
 
@@ -323,46 +419,22 @@ export default function TasksProvider({ children }) {
         prevGroups.map((group) => {
           if (!group || !Array.isArray(group.tasks)) return group;
 
-          return group.name === lastDeleted.data.groupName
-            ? {
-                ...group,
-                tasks: [
-                  ...group.tasks.slice(0, lastDeleted.data.index),
-                  {
-                    ...lastDeleted.data.task,
-                    id: lastDeleted.data.task.id || Date.now(),
-                  }, // ✅ تأكد من أن `task.id` موجود
-                  ...group.tasks.slice(lastDeleted.data.index),
-                ],
-              }
-            : group;
+          // ✅ إذا كانت المهمة تخص هذه المجموعة، قم بإرجاعها إلى موقعها الأصلي
+          if (group.name === lastDeleted.data.groupName) {
+            const updatedTasks = [...group.tasks];
+
+            // ✅ إدراج المهمة في مكانها الأصلي بنفس البيانات الأصلية
+            updatedTasks.splice(
+              lastDeleted.data.index ?? updatedTasks.length,
+              0,
+              lastDeleted.data
+            );
+
+            return { ...group, tasks: updatedTasks };
+          }
+          return group;
         })
       );
-    } else if (lastDeleted.type === "Group") {
-      setGroups((prevGroups) => {
-        if (!Array.isArray(prevGroups)) return [];
-
-        const index = lastDeleted.data.index ?? prevGroups.length;
-
-        return [
-          ...prevGroups.slice(0, index),
-          {
-            ...lastDeleted.data, // ✅ استرجاع جميع بيانات المجموعة
-            // name: lastDeleted.data.name
-            //   ? lastDeleted.data.name
-            //   : lastDeleted.data.groupName
-            //   ? lastDeleted.data.groupName
-            //   : `Restored Group ${Date.now()}`,
-            tasks: Array.isArray(lastDeleted.data.tasks)
-              ? lastDeleted.data.tasks
-              : [], // ✅ التأكد من أن `tasks` ليست `undefined`
-            columns: Array.isArray(lastDeleted.data.columns)
-              ? lastDeleted.data.columns
-              : [], // ✅ التأكد من استرجاع `columns`
-          },
-          ...prevGroups.slice(index),
-        ];
-      });
     }
 
     setShowDeletedMessage(false);
@@ -401,35 +473,65 @@ export default function TasksProvider({ children }) {
     setGroups((prevGroups) => [...prevGroups, newGroup]);
   };
 
+  // سحب وإفلات المجموعات والمهام
   const handleDragEnd = (result) => {
-    console.log("Drag End Result:", result);
+    if (!result.destination) return; // ✅ إذا لم يكن هناك وجهة، لا تفعل شيئًا
 
-    if (!result.destination) return; // ✅ منع الأخطاء إذا لم يكن هناك إسقاط صحيح
-
-    const { source, destination } = result;
+    const { source, destination, type } = result;
 
     setGroups((prevGroups) => {
-      const newGroups = [...prevGroups];
+      let updatedGroups = [...prevGroups];
 
-      // ✅ إصلاح `droppableId` لضمان العثور على المجموعة الصحيحة
-      const sourceGroupName = source.droppableId.replace("group-", "");
-      const destinationGroupName = destination.droppableId.replace(
-        "group-",
-        ""
-      );
+      if (type === "group") {
+        // 🔥 إعادة ترتيب المجموعات
+        const [movedGroup] = updatedGroups.splice(source.index, 1);
+        updatedGroups.splice(destination.index, 0, movedGroup);
+        return updatedGroups;
+      }
 
-      const sourceGroup = newGroups.find((g) => g.name === sourceGroupName);
-      const destinationGroup = newGroups.find(
-        (g) => g.name === destinationGroupName
-      );
+      if (type === "task") {
+        // 🔥 البحث عن المجموعة المصدر والهدف
+        const sourceGroupIndex = updatedGroups.findIndex(
+          (g) => g.name === source.droppableId
+        );
+        const destinationGroupIndex = updatedGroups.findIndex(
+          (g) => g.name === destination.droppableId
+        );
 
-      if (!sourceGroup || !destinationGroup) return prevGroups; // ✅ منع الأخطاء
+        if (sourceGroupIndex === -1 || destinationGroupIndex === -1)
+          return prevGroups;
 
-      const [movedTask] = sourceGroup.tasks.splice(source.index, 1);
+        // ✅ إنشاء نسخة جديدة من المجموعات
+        const sourceGroup = { ...updatedGroups[sourceGroupIndex] };
+        const destinationGroup = { ...updatedGroups[destinationGroupIndex] };
 
-      destinationGroup.tasks.splice(destination.index, 0, movedTask);
+        // ✅ إنشاء نسخة جديدة من المهام حتى لا يتم تعديل `state` مباشرة
+        const sourceTasks = [...sourceGroup.tasks];
+        const destinationTasks = [...destinationGroup.tasks];
 
-      return newGroups;
+        // 🔥 استخراج المهمة التي يتم سحبها
+        const [movedTask] = sourceTasks.splice(source.index, 1);
+        if (!movedTask) return prevGroups;
+
+        // ✅ إذا تم السحب داخل نفس المجموعة، قم فقط بإعادة ترتيب المهام
+        if (sourceGroup.name === destinationGroup.name) {
+          sourceTasks.splice(destination.index, 0, movedTask);
+          sourceGroup.tasks = sourceTasks;
+          updatedGroups[sourceGroupIndex] = sourceGroup;
+        } else {
+          // ✅ إذا تم نقل المهمة إلى مجموعة أخرى
+          destinationTasks.splice(destination.index, 0, movedTask);
+          sourceGroup.tasks = sourceTasks;
+          destinationGroup.tasks = destinationTasks;
+
+          updatedGroups[sourceGroupIndex] = sourceGroup;
+          updatedGroups[destinationGroupIndex] = destinationGroup;
+        }
+
+        return updatedGroups;
+      }
+
+      return prevGroups;
     });
   };
 
@@ -630,9 +732,10 @@ export default function TasksProvider({ children }) {
 
   const handleContextMenu = (event, type, taskId = null, groupName = null) => {
     event.preventDefault();
+    event.stopPropagation(); // ✅ منع اختفاء القائمة فورًا
 
-    if (type === "task") {
-      handleTaskSelection(taskId, groupName, true);
+    if (type === "task" && taskId) {
+      setSelectedTasks(new Set([taskId])); // ✅ تحديد المهمة فورًا عند الضغط كليك يمين
     }
 
     setContextMenu({
@@ -650,21 +753,70 @@ export default function TasksProvider({ children }) {
     return () => document.removeEventListener("click", handleClickOutside);
   }, []);
 
-  const handleTaskNameChange = (e, taskId, groupName) => {
-    const newName = e.target.value;
-
+  const updateTaskField = (taskId, field, value) => {
     setGroups((prevGroups) =>
-      prevGroups.map((group) =>
-        group.name === groupName
-          ? {
-              ...group,
-              tasks: group.tasks.map((task) =>
-                task.id === taskId ? { ...task, name: newName } : task
-              ),
-            }
-          : group
-      )
+      prevGroups.map((group) => ({
+        ...group,
+        tasks: group.tasks.map((task) =>
+          task.id === taskId ? { ...task, [field]: value } : task
+        ),
+      }))
     );
+  };
+
+  const handleColumnContextMenu = (event, columnId) => {
+    event.preventDefault();
+    const menu = document.getElementById("column-context-menu");
+    menu.style.top = `${event.pageY}px`;
+    menu.style.left = `${event.pageX}px`;
+    menu.style.display = "block";
+    menu.dataset.columnId = columnId;
+  };
+
+  const hideColumn = () => {
+    const columnId = document.getElementById("column-context-menu").dataset
+      .columnId;
+    setHiddenColumns((prev) => [...prev, columnId]);
+    document.getElementById("column-context-menu").style.display = "none";
+  };
+
+  const showHiddenColumnsMenu = (event) => {
+    event.preventDefault();
+    const menu = document.getElementById("hidden-columns-menu");
+    menu.style.top = `${event.pageY}px`;
+    menu.style.left = `${event.pageX}px`;
+    menu.style.display = "block";
+  };
+
+  const restoreColumn = (columnId) => {
+    setHiddenColumns((prev) => prev.filter((id) => id !== columnId));
+    document.getElementById("hidden-columns-menu").style.display = "none";
+  };
+
+  const startResizing = (event, columnId) => {
+    event.preventDefault();
+    const startX = event.clientX;
+    const columnIndex = columns.findIndex((col) => col.id === columnId);
+
+    const handleMouseMove = (moveEvent) => {
+      const newWidth = Math.max(
+        50,
+        columns[columnIndex].width + (moveEvent.clientX - startX)
+      );
+      setColumns((prevColumns) =>
+        prevColumns.map((col, index) =>
+          index === columnIndex ? { ...col, width: newWidth } : col
+        )
+      );
+    };
+
+    const handleMouseUp = () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
   };
 
   return (
@@ -679,7 +831,6 @@ export default function TasksProvider({ children }) {
         contextMenu,
         setContextMenu,
         groups,
-        setGroups,
         showDeletePopup,
         setShowDeletePopup,
         showDeletedMessage,
@@ -706,7 +857,17 @@ export default function TasksProvider({ children }) {
         duplicateGroup,
         contextMenuOptions,
         handleContextMenu,
-        handleTaskNameChange,
+        tasks,
+        setTasks,
+        columns,
+        setColumns,
+        updateTaskField,
+        hiddenColumns,
+        hideColumn,
+        restoreColumn,
+        startResizing,
+        handleColumnContextMenu,
+        showHiddenColumnsMenu,
       }}
     >
       {children}

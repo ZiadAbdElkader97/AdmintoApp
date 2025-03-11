@@ -21,7 +21,6 @@ export default function Tasks() {
     selectedTasks,
     contextMenu,
     groups,
-    setGroups,
     showDeletePopup,
     setShowDeletePopup,
     showDeletedMessage,
@@ -45,7 +44,14 @@ export default function Tasks() {
     toggleGroup,
     contextMenuOptions,
     handleContextMenu,
-    handleTaskNameChange,
+    columns,
+    updateTaskField,
+    hiddenColumns,
+    hideColumn,
+    restoreColumn,
+    startResizing,
+    handleColumnContextMenu,
+    showHiddenColumnsMenu,
   } = useContext(TasksContext);
 
   return (
@@ -55,7 +61,7 @@ export default function Tasks() {
           <div className="tasks-header">
             <button
               className="add_task"
-              onClick={() => addTask(groups[0].name)}
+              onClick={() => groups.length > 0 && addTask(groups[0].name)}
             >
               <i>
                 <FaPlus />
@@ -135,150 +141,311 @@ export default function Tasks() {
 
                           {/* Droppable للمهام داخل كل مجموعة */}
                           {expandedGroups[group.name] && (
-                            <Droppable
-                              droppableId={`group-${group.name}`}
-                              type="task"
-                            >
+                            <Droppable droppableId={group.name} type="task">
                               {(provided) => (
-                                <table
-                                  className="tasks-table"
-                                  ref={provided.innerRef}
-                                  {...provided.droppableProps}
-                                >
-                                  <thead>
-                                    <tr>
-                                      <th>
-                                        <input
-                                          type="checkbox"
-                                          checked={
-                                            group.tasks?.length > 0 &&
-                                            group.tasks.every((task) =>
-                                              selectedTasks.has(
-                                                `${group.name}-${task.id}`
+                                <div className="table-container">
+                                  <table
+                                    className="tasks-table"
+                                    ref={provided.innerRef}
+                                    {...provided.droppableProps}
+                                  >
+                                    <thead>
+                                      <tr>
+                                        <th>
+                                          <input
+                                            type="checkbox"
+                                            checked={
+                                              group.tasks.length > 0 &&
+                                              group.tasks.every((task) =>
+                                                selectedTasks.has(task.id)
                                               )
-                                            )
-                                          }
-                                          onChange={() =>
-                                            toggleSelectAll(group.name)
-                                          }
-                                        />
-                                      </th>
-                                      {Array.isArray(group.columns) ? (
-                                        group.columns
-                                          .slice(1)
+                                            }
+                                            onChange={() =>
+                                              toggleSelectAll(group.name)
+                                            }
+                                          />
+                                        </th>
+                                        {columns
+                                          .filter((col) => col.visible)
                                           .map((col, colIndex) => (
-                                            <th key={colIndex}>{col}</th>
-                                          ))
-                                      ) : (
-                                        <th>No Columns</th>
-                                      )}
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {group.tasks.map((task, taskIndex) => (
-                                      <Draggable
-                                      key={`task-${String(task.id)}-${taskIndex}`}
-                                      draggableId={`task-${String(task.id)}`}
-                                        index={taskIndex}
-                                      >
-                                        {(provided) => (
-                                          <tr
-                                            ref={provided.innerRef}
-                                            {...provided.draggableProps}
-                                            {...provided.dragHandleProps}
-                                            onContextMenu={(e) =>
-                                              handleContextMenu(
-                                                e,
-                                                "task",
-                                                task.id,
-                                                group.name
-                                              )
-                                            }
-                                            className={
-                                              selectedTasks.has(
-                                                `${group.name}-${task.id}`
-                                              )
-                                                ? "selected_row"
-                                                : ""
-                                            }
+                                            <th
+                                              key={colIndex}
+                                              style={{ width: col.width }}
+                                              onContextMenu={(e) =>
+                                                handleColumnContextMenu(
+                                                  e,
+                                                  col.id
+                                                )
+                                              }
+                                            >
+                                              {col.name}
+                                              <div
+                                                className="resizer"
+                                                onMouseDown={(e) =>
+                                                  startResizing(e, col.id)
+                                                }
+                                              />
+                                            </th>
+                                          ))}
+                                        {/* ✅ زر "إضافة عمود" */}
+                                          <th
+                                            onClick={showHiddenColumnsMenu}
+                                            className="add_column"
                                           >
-                                            <td>
-                                              <input
-                                                type="checkbox"
-                                                checked={selectedTasks.has(
-                                                  `${group.name}-${task.id}`
-                                                )}
-                                                onChange={() =>
-                                                  handleTaskSelection(
-                                                    task.id,
-                                                    group.name
-                                                  )
-                                                }
-                                              />
-                                            </td>
-                                            <td>
-                                              <input
-                                                type="text"
-                                                value={task.name ?? ""}
-                                                onChange={(e) =>
-                                                  handleTaskNameChange(
-                                                    e,
+                                            +
+                                          </th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {group.tasks.map((task, taskIndex) => (
+                                        <Draggable
+                                          key={`task-${task.id}`}
+                                          draggableId={`task-${task.id}`}
+                                          index={taskIndex}
+                                        >
+                                          {(provided) => (
+                                            <tr
+                                              ref={provided.innerRef}
+                                              {...provided.draggableProps}
+                                              {...provided.dragHandleProps}
+                                              onContextMenu={(e) =>
+                                                handleContextMenu(
+                                                  e,
+                                                  "task",
+                                                  task.id,
+                                                  group.name
+                                                )
+                                              }
+                                              className={
+                                                selectedTasks.has(task.id)
+                                                  ? "selected_row"
+                                                  : ""
+                                              }
+                                            >
+                                              {/* ✅ Checkbox لتحديد المهمة */}
+                                              <td>
+                                                <input
+                                                  type="checkbox"
+                                                  checked={selectedTasks.has(
                                                     task.id
-                                                  )
-                                                }
-                                              />
-                                            </td>
-                                            {group.columns
-                                              .slice(2)
-                                              .map((col, colIndex) => (
-                                                <td key={colIndex}>
-                                                  <input
-                                                    type="text"
-                                                    value={
-                                                      task.data?.[col] || ""
-                                                    }
-                                                    onChange={(e) => {
-                                                      setGroups(
-                                                        (prevGroups) => {
-                                                          return prevGroups.map(
-                                                            (g) =>
-                                                              g.name ===
-                                                              group.name
-                                                                ? {
-                                                                    ...g,
-                                                                    tasks:
-                                                                      g.tasks.map(
-                                                                        (t) =>
-                                                                          t.id ===
-                                                                          task.id
-                                                                            ? {
-                                                                                ...t,
-                                                                                data: {
-                                                                                  ...t.data,
-                                                                                  [col]:
-                                                                                    e
-                                                                                      .target
-                                                                                      .value,
-                                                                                },
-                                                                              }
-                                                                            : t
-                                                                      ),
-                                                                  }
-                                                                : g
-                                                          );
+                                                  )}
+                                                  onChange={() =>
+                                                    handleTaskSelection(
+                                                      task.id,
+                                                      group.name
+                                                    )
+                                                  }
+                                                />
+                                              </td>
+                                              {/* ✅ تخصيص نوع الإدخال لكل عمود */}
+                                              {columns
+                                                .filter(
+                                                  (col, index, self) =>
+                                                    index ===
+                                                      self.findIndex(
+                                                        (c) => c.id === col.id
+                                                      ) && col.visible
+                                                )
+                                                .map((col, colIndex) => (
+                                                  <td
+                                                    key={colIndex}
+                                                    style={{ width: col.width }}
+                                                  >
+                                                    {col.id === "task" ||
+                                                    col.id === "notes" ||
+                                                    col.id === "dependent" ? (
+                                                      // ✅ إدخال نصي عادي
+                                                      <input
+                                                        className="custom_text"
+                                                        type="text"
+                                                        value={
+                                                          task[col.id] || ""
                                                         }
-                                                      );
-                                                    }}
-                                                  />
-                                                </td>
-                                              ))}
-                                          </tr>
-                                        )}
-                                      </Draggable>
-                                    ))}
-                                    {provided.placeholder}
-                                  </tbody>
-                                </table>
+                                                        placeholder={
+                                                          col.id === "notes"
+                                                            ? "Add notes..."
+                                                            : "Enter dependency..."
+                                                        }
+                                                        onChange={(e) =>
+                                                          updateTaskField(
+                                                            task.id,
+                                                            col.id,
+                                                            e.target.value
+                                                          )
+                                                        }
+                                                      />
+                                                    ) : col.id === "date" ||
+                                                      col.id === "timeline" ||
+                                                      col.id === "updated" ? (
+                                                      // ✅ إدخال تاريخ (Date)
+                                                      <input
+                                                        type="date"
+                                                        value={
+                                                          task[col.id] || ""
+                                                        }
+                                                        onChange={(e) =>
+                                                          updateTaskField(
+                                                            task.id,
+                                                            col.id,
+                                                            e.target.value
+                                                          )
+                                                        }
+                                                      />
+                                                    ) : col.id ===
+                                                      "priority" ? (
+                                                      // ✅ قائمة منسدلة (Dropdown) لـ Priority
+                                                      <select
+                                                        className="custom_select"
+                                                        value={task[col.id]}
+                                                        onChange={(e) =>
+                                                          updateTaskField(
+                                                            task.id,
+                                                            col.id,
+                                                            e.target.value
+                                                          )
+                                                        }
+                                                      >
+                                                        <option value="High">
+                                                          High
+                                                        </option>
+                                                        <option value="Medium">
+                                                          Medium
+                                                        </option>
+                                                        <option value="Low">
+                                                          Low
+                                                        </option>
+                                                      </select>
+                                                    ) : col.id === "status" ? (
+                                                      // ✅ قائمة منسدلة (Dropdown)
+                                                      <select
+                                                        className="custom_select"
+                                                        value={task[col.id]}
+                                                        onChange={(e) =>
+                                                          updateTaskField(
+                                                            task.id,
+                                                            col.id,
+                                                            e.target.value
+                                                          )
+                                                        }
+                                                      >
+                                                        <option value="To Do">
+                                                          To Do
+                                                        </option>
+                                                        <option value="Doing">
+                                                          Doing
+                                                        </option>
+                                                        <option value="Done">
+                                                          Done
+                                                        </option>
+                                                      </select>
+                                                    ) : col.id ===
+                                                      "progress" ? (
+                                                      // ✅ شريط تقدم (Range) من 0% إلى 100%
+                                                      <input
+                                                        type="range"
+                                                        min="0"
+                                                        max="100"
+                                                        value={
+                                                          parseInt(
+                                                            task[col.id]
+                                                          ) || 0
+                                                        }
+                                                        onChange={(e) =>
+                                                          updateTaskField(
+                                                            task.id,
+                                                            col.id,
+                                                            `${e.target.value}%`
+                                                          )
+                                                        }
+                                                      />
+                                                    ) : col.id === "budget" ? (
+                                                      // ✅ إدخال مبلغ مالي بالدولار
+                                                      <input
+                                                        type="text"
+                                                        value={task[col.id]}
+                                                        onChange={(e) => {
+                                                          const formattedValue = `$${e.target.value.replace(
+                                                            /[^0-9]/g,
+                                                            ""
+                                                          )}`;
+                                                          updateTaskField(
+                                                            task.id,
+                                                            col.id,
+                                                            formattedValue
+                                                          );
+                                                        }}
+                                                      />
+                                                    ) : col.id === "files" ? (
+                                                      // ✅ إدخال ملف أو صورة
+                                                      <input
+                                                        type="file"
+                                                        onChange={(e) =>
+                                                          updateTaskField(
+                                                            task.id,
+                                                            col.id,
+                                                            e.target.files[0]
+                                                              ?.name || ""
+                                                          )
+                                                        }
+                                                      />
+                                                    ) : col.id === "rating" ? (
+                                                      // ✅ تقييم بالنجوم (Select)
+                                                      <select
+                                                        className="custom_select custom_select_rate"
+                                                        value={task[col.id]}
+                                                        onChange={(e) =>
+                                                          updateTaskField(
+                                                            task.id,
+                                                            col.id,
+                                                            e.target.value
+                                                          )
+                                                        }
+                                                      >
+                                                        <option value="0⭐">
+                                                          0 ⭐
+                                                        </option>
+                                                        <option value="1⭐">
+                                                          1 ⭐
+                                                        </option>
+                                                        <option value="2⭐">
+                                                          2 ⭐
+                                                        </option>
+                                                        <option value="3⭐">
+                                                          3 ⭐
+                                                        </option>
+                                                        <option value="4⭐">
+                                                          4 ⭐
+                                                        </option>
+                                                        <option value="5⭐">
+                                                          5 ⭐
+                                                        </option>
+                                                      </select>
+                                                    ) : (
+                                                      // ✅ إدخال افتراضي لأي عمود آخر
+                                                      <input
+                                                        type="text"
+                                                        value={
+                                                          task[col.id] || ""
+                                                        }
+                                                        onChange={(e) =>
+                                                          updateTaskField(
+                                                            task.id,
+                                                            col.id,
+                                                            e.target.value
+                                                          )
+                                                        }
+                                                      />
+                                                    )}
+                                                  </td>
+                                                ))}
+                                            </tr>
+                                          )}
+                                        </Draggable>
+                                      ))}
+                                      {provided.placeholder}
+                                    </tbody>
+                                  </table>
+                                </div>
                               )}
                             </Droppable>
                           )}
@@ -407,6 +574,22 @@ export default function Tasks() {
               </div>
             </div>
           )}
+
+          <div id="column-context-menu" className="hide_context_menu">
+            <ul>
+              <li onClick={hideColumn}>Hidden Column</li>
+            </ul>
+          </div>
+
+          <div id="hidden-columns-menu" className="hide_context_menu">
+            <ul>
+              {hiddenColumns.map((colId) => (
+                <li key={colId} onClick={() => restoreColumn(colId)}>
+                  {columns.find((col) => col.id === colId)?.name}
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </div>
     </div>
