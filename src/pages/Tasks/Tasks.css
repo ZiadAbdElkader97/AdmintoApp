@@ -12,7 +12,7 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
-  overflow-x: auto;
+  overflow: hidden;
   white-space: nowrap;
 }
 
@@ -82,7 +82,7 @@
 /* Group Styling */
 .group {
   min-width: max-content;
-  background: #2a2a3d;
+  background: #1c1c26;
   border-radius: 8px;
   padding: 15px;
   transition: 0.3s;
@@ -90,7 +90,7 @@
 }
 
 .group:hover {
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  box-shadow: 8px 4px 10px rgba(0, 0, 0, 0.3);
 }
 
 .group-header {
@@ -126,12 +126,14 @@
 
 .table-container {
   width: 100%;
+  overflow: visible !important;
 }
 
 .tasks-table {
   display: block;
   width: max-content;
   min-width: 100%;
+  background: #31334f;
   margin-bottom: 10px;
   border-collapse: collapse;
   table-layout: auto;
@@ -140,21 +142,17 @@
 .tasks-table th,
 .tasks-table td {
   color: #c3c3c3;
-  text-align: left;
+  text-align: center;
   padding: 8px 12px;
   border: 1px solid #c3c3c3;
   white-space: nowrap;
-}
-
-.tasks-table th {
-  background: #2a2a3d;
-  color: #c3c3c3;
 }
 
 .tasks-table input {
   background: transparent;
   color: #c3c3c3;
   width: 100%;
+  font-size: 15px;
   padding: 5px;
   border: none;
   outline: none;
@@ -205,7 +203,7 @@ th .resizer {
 }
 
 th .resizer:hover {
-  background-color: rgba(255, 255, 255, 0.3);
+  background-color: var(--main_color);
 }
 
 /* Task Input Section */
@@ -409,6 +407,9 @@ td {
   width: 60px;
   text-align: center;
 }
+.custom_select_status {
+  color: white;
+}
 
 /* ✅ إزالة السهم الافتراضي في بعض المتصفحات */
 .custom_select::-ms-expand {
@@ -462,4 +463,172 @@ td {
 
 .add_column {
   height: 100%;
+}
+
+.progress-container {
+  position: relative;
+  width: 100%;
+  height: 25px;
+  background-color: #e0e0e0;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  position: relative;
+  height: 100%;
+  color: #fff;
+  text-align: center;
+  font-size: 14px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: 0.3s;
+}
+
+/* ✅ تنسيق الـ Status, Priority Dropdown */
+.status_priority_wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.status_priority_badge {
+  width: 100%;
+  padding: 6px 12px;
+  border-radius: 5px;
+  font-weight: bold;
+  display: inline-block;
+  color: white;
+  transition: 0.3s;
+  cursor: pointer;
+}
+
+.status_priority_badge:hover {
+  filter: brightness(1.2);
+}
+
+.status_priority_dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 160px;
+  background: #2a2a3d;
+  padding: 15px 20px;
+  border-radius: 6px;
+  overflow: hidden;
+  z-index: 100;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.status_priority_option {
+  color: white;
+  text-align: center;
+  font-weight: bold;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  transition: background 0.3s ease-in-out;
+  cursor: pointer;
+}
+
+.status_priority_option:hover {
+  filter: brightness(1.1);
+}
+
+/* ✅ تنسيق عنصر التاريخ */
+.date-wrapper {
+  position: relative;
+  display: inline-block;
+  border-radius: 5px;
+  transition: 0.3s;
+  cursor: pointer;
+}
+
+.date-text {
+  display: inline-block;
+  color: #ffffff;
+  font-weight: bold;
+  background-color: #2a2a3d;
+  padding: 6px 10px;
+  border-radius: 5px;
+}
+
+.date-wrapper:hover .date-text {
+  filter: brightness(1.2);
+}
+
+.calendar-popup {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  transform: translateX(-30%);
+  width: 300px;
+  background: #2a2a3d;
+  font-size: 14px;
+  color: white;
+  padding: 5px;
+  border: 1px solid #444;
+  border-radius: 6px;
+  z-index: 1000;
+  outline: none;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.calendar-popup .react-calendar {
+  width: 100%;
+  max-width: 320px;
+  background: #2a2a3d;
+  color: white;
+  border-radius: 8px;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+  padding: 15px;
+}
+
+.react-calendar__navigation button {
+  width: 30px;
+  height: 30px;
+  color: #007bff;
+  font-size: 15px;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+.react-calendar__navigation button:hover {
+  background: #3a5d8c !important;
+}
+
+.react-calendar__tile:hover {
+  background: #134fa9;
+  border-radius: 6px;
+}
+
+.react-calendar__tile--active {
+  background: #007bff !important;
+  color: white !important;
+  border-radius: 6px;
+}
+
+.calendar-popup .react-calendar__tile:hover {
+  background: #3a5d8c !important;
+  color: white;
+}
+
+.calendar-popup .react-calendar__tile--now {
+  background: #ffcc00;
+  color: white;
+  font-weight: bold;
+  border-radius: 6px;
+}
+
+.react-calendar__year-view__months__month:hover {
+  background: #4caf50 !important; /* 🔹 لون الـ hover عند تمرير الماوس فوق الشهور */
+  color: white;
+  border-radius: 6px;
+  transition: background 0.2s ease-in-out;
+}
+
+@media (max-width: 600px) {
+  .calendar-popup {
+    width: 260px;
+  }
 }

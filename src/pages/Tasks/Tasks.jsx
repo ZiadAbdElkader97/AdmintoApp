@@ -1,6 +1,8 @@
 import "./Tasks.css";
 import Modal from "react-modal";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+import Calendar from "react-calendar";
+import "react-calendar/dist/Calendar.css";
 import {
   FaPlus,
   FaSearch,
@@ -52,6 +54,16 @@ export default function Tasks() {
     startResizing,
     handleColumnContextMenu,
     showHiddenColumnsMenu,
+    calculateProgress,
+    getProgressColor,
+    getStatusColor,
+    getPriorityColor,
+    showPriorityDropdown,
+    setShowPriorityDropdown,
+    showDropdown,
+    setShowDropdown,
+    showDatepicker,
+    setShowDatepicker,
   } = useContext(TasksContext);
 
   return (
@@ -141,16 +153,20 @@ export default function Tasks() {
 
                           {/* Droppable للمهام داخل كل مجموعة */}
                           {expandedGroups[group.name] && (
-                            <Droppable droppableId={group.name} type="task">
-                              {(provided) => (
-                                <div className="table-container">
-                                  <table
-                                    className="tasks-table"
-                                    ref={provided.innerRef}
-                                    {...provided.droppableProps}
-                                  >
+                            <div className="table-container">
+                              <table className="tasks-table">
+                                <Droppable
+                                  droppableId={`columns-${group.name}`}
+                                  direction="horizontal"
+                                  type="column"
+                                >
+                                  {(provided) => (
                                     <thead>
-                                      <tr>
+                                      <tr
+                                        ref={provided.innerRef}
+                                        {...provided.droppableProps}
+                                      >
+                                        {/* ✅ Checkbox تحديد الكل */}
                                         <th>
                                           <input
                                             type="checkbox"
@@ -165,43 +181,66 @@ export default function Tasks() {
                                             }
                                           />
                                         </th>
+                                        {/* ✅ الأعمدة القابلة للسحب */}
                                         {columns
                                           .filter((col) => col.visible)
-                                          .map((col, colIndex) => (
-                                            <th
-                                              key={colIndex}
-                                              style={{ width: col.width }}
-                                              onContextMenu={(e) =>
-                                                handleColumnContextMenu(
-                                                  e,
-                                                  col.id
-                                                )
-                                              }
+                                          .map((col, index) => (
+                                            <Draggable
+                                              key={`column-${group.name}-${col.id}`}
+                                              draggableId={`column-${group.name}-${col.id}`}
+                                              index={index}
                                             >
-                                              {col.name}
-                                              <div
-                                                className="resizer"
-                                                onMouseDown={(e) =>
-                                                  startResizing(e, col.id)
-                                                }
-                                              />
-                                            </th>
+                                              {(provided) => (
+                                                <th
+                                                  ref={provided.innerRef}
+                                                  {...provided.draggableProps}
+                                                  {...provided.dragHandleProps}
+                                                  style={{
+                                                    width: col.width,
+                                                    cursor: "grab",
+                                                  }}
+                                                  onContextMenu={(e) =>
+                                                    handleColumnContextMenu(
+                                                      e,
+                                                      col.id
+                                                    )
+                                                  }
+                                                >
+                                                  {col.name}
+                                                  <div
+                                                    className="resizer"
+                                                    onMouseDown={(e) =>
+                                                      startResizing(e, col.id)
+                                                    }
+                                                  />
+                                                </th>
+                                              )}
+                                            </Draggable>
                                           ))}
+                                        {provided.placeholder}
                                         {/* ✅ زر "إضافة عمود" */}
-                                          <th
-                                            onClick={showHiddenColumnsMenu}
-                                            className="add_column"
-                                          >
-                                            +
-                                          </th>
+                                        <th
+                                          onClick={showHiddenColumnsMenu}
+                                          className="add_column"
+                                        >
+                                          +
+                                        </th>
                                       </tr>
                                     </thead>
-                                    <tbody>
-                                      {group.tasks.map((task, taskIndex) => (
+                                  )}
+                                </Droppable>
+
+                                <Droppable droppableId={group.name} type="task">
+                                  {(provided) => (
+                                    <tbody
+                                      ref={provided.innerRef}
+                                      {...provided.droppableProps}
+                                    >
+                                      {group.tasks.map((task, index) => (
                                         <Draggable
-                                          key={`task-${task.id}`}
-                                          draggableId={`task-${task.id}`}
-                                          index={taskIndex}
+                                          key={`task-${group.name}-${task.id}`}
+                                          draggableId={`task-${group.name}-${task.id}`}
+                                          index={index}
                                         >
                                           {(provided) => (
                                             <tr
@@ -249,7 +288,20 @@ export default function Tasks() {
                                                 .map((col, colIndex) => (
                                                   <td
                                                     key={colIndex}
-                                                    style={{ width: col.width }}
+                                                    style={{
+                                                      width: col.width,
+                                                      backgroundColor:
+                                                        col.id === "status"
+                                                          ? getStatusColor(
+                                                              task.status
+                                                            )
+                                                          : col.id ===
+                                                            "priority"
+                                                          ? getPriorityColor(
+                                                              task.priority
+                                                            )
+                                                          : "inherit",
+                                                    }}
                                                   >
                                                     {col.id === "task" ||
                                                     col.id === "notes" ||
@@ -278,86 +330,204 @@ export default function Tasks() {
                                                       col.id === "timeline" ||
                                                       col.id === "updated" ? (
                                                       // ✅ إدخال تاريخ (Date)
-                                                      <input
-                                                        type="date"
-                                                        value={
-                                                          task[col.id] || ""
-                                                        }
-                                                        onChange={(e) =>
-                                                          updateTaskField(
-                                                            task.id,
-                                                            col.id,
-                                                            e.target.value
-                                                          )
-                                                        }
-                                                      />
+                                                      <div
+                                                        className="date-wrapper"
+                                                        onClick={(e) => {
+                                                          e.stopPropagation();
+                                                          setShowDatepicker(
+                                                            (prev) =>
+                                                              prev ===
+                                                              `${task.id}-${col.id}`
+                                                                ? null
+                                                                : `${task.id}-${col.id}`
+                                                          );
+                                                        }}
+                                                      >
+                                                        <span className="date-text">
+                                                          {task[col.id]}
+                                                        </span>
+                                                        {showDatepicker ===
+                                                          `${task.id}-${col.id}` && (
+                                                          <div className="calendar-popup">
+                                                            <Calendar
+                                                              onChange={(
+                                                                date
+                                                              ) => {
+                                                                const localDate =
+                                                                  new Date(
+                                                                    date.getTime() -
+                                                                      date.getTimezoneOffset() *
+                                                                        60000
+                                                                  )
+                                                                    .toISOString()
+                                                                    .split(
+                                                                      "T"
+                                                                    )[0];
+
+                                                                updateTaskField(
+                                                                  task.id,
+                                                                  col.id,
+                                                                  localDate
+                                                                );
+                                                                setShowDatepicker(
+                                                                  null
+                                                                ); // إغلاق التقويم بعد اختيار التاريخ
+                                                              }}
+                                                              value={
+                                                                task[col.id]
+                                                                  ? new Date(
+                                                                      task[
+                                                                        col.id
+                                                                      ]
+                                                                    )
+                                                                  : new Date()
+                                                              }
+                                                            />
+                                                          </div>
+                                                        )}
+                                                      </div>
                                                     ) : col.id ===
                                                       "priority" ? (
                                                       // ✅ قائمة منسدلة (Dropdown) لـ Priority
-                                                      <select
-                                                        className="custom_select"
-                                                        value={task[col.id]}
-                                                        onChange={(e) =>
-                                                          updateTaskField(
-                                                            task.id,
-                                                            col.id,
-                                                            e.target.value
-                                                          )
-                                                        }
+                                                      <div
+                                                        className="status_priority_wrapper"
+                                                        style={{
+                                                          backgroundColor:
+                                                            getPriorityColor(
+                                                              task.priority
+                                                            ),
+                                                        }}
                                                       >
-                                                        <option value="High">
-                                                          High
-                                                        </option>
-                                                        <option value="Medium">
-                                                          Medium
-                                                        </option>
-                                                        <option value="Low">
-                                                          Low
-                                                        </option>
-                                                      </select>
+                                                        <span
+                                                          onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setShowPriorityDropdown(
+                                                              task.id
+                                                            );
+                                                          }}
+                                                          className="status_priority_badge"
+                                                        >
+                                                          {task.priority}
+                                                        </span>
+                                                        {showPriorityDropdown ===
+                                                          task.id && (
+                                                          <div className="status_priority_dropdown">
+                                                            {[
+                                                              "Critical",
+                                                              "High",
+                                                              "Medium",
+                                                              "Low",
+                                                              "Best Effort",
+                                                              "Missing",
+                                                            ].map(
+                                                              (priority) => (
+                                                                <div
+                                                                  key={priority}
+                                                                  onClick={() => {
+                                                                    updateTaskField(
+                                                                      task.id,
+                                                                      "priority",
+                                                                      priority
+                                                                    );
+                                                                    setShowPriorityDropdown(
+                                                                      null
+                                                                    );
+                                                                  }}
+                                                                  className="status_priority_option"
+                                                                  style={{
+                                                                    backgroundColor:
+                                                                      getPriorityColor(
+                                                                        priority
+                                                                      ),
+                                                                  }}
+                                                                >
+                                                                  {priority}
+                                                                </div>
+                                                              )
+                                                            )}
+                                                          </div>
+                                                        )}
+                                                      </div>
                                                     ) : col.id === "status" ? (
                                                       // ✅ قائمة منسدلة (Dropdown)
-                                                      <select
-                                                        className="custom_select"
-                                                        value={task[col.id]}
-                                                        onChange={(e) =>
-                                                          updateTaskField(
-                                                            task.id,
-                                                            col.id,
-                                                            e.target.value
-                                                          )
-                                                        }
-                                                      >
-                                                        <option value="To Do">
-                                                          To Do
-                                                        </option>
-                                                        <option value="Doing">
-                                                          Doing
-                                                        </option>
-                                                        <option value="Done">
-                                                          Done
-                                                        </option>
-                                                      </select>
+                                                      <div className="status_priority_wrapper">
+                                                        <span
+                                                          onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setShowDropdown(
+                                                              task.id
+                                                            );
+                                                          }}
+                                                          className="status_priority_badge"
+                                                        >
+                                                          {task.status}
+                                                        </span>
+                                                        {showDropdown ===
+                                                          task.id && (
+                                                          <div className="status_priority_dropdown">
+                                                            {[
+                                                              "Ready to start",
+                                                              "Waiting for review",
+                                                              "In Progress",
+                                                              "Pending Deploy",
+                                                              "Done",
+                                                              "Stuck",
+                                                            ].map((status) => (
+                                                              <div
+                                                                key={status}
+                                                                onClick={() => {
+                                                                  updateTaskField(
+                                                                    task.id,
+                                                                    "status",
+                                                                    status
+                                                                  );
+                                                                  setShowDropdown(
+                                                                    null
+                                                                  );
+                                                                }}
+                                                                className="status_priority_option"
+                                                                style={{
+                                                                  backgroundColor:
+                                                                    getStatusColor(
+                                                                      status
+                                                                    ),
+                                                                }}
+                                                              >
+                                                                {status}
+                                                              </div>
+                                                            ))}
+                                                          </div>
+                                                        )}
+                                                      </div>
                                                     ) : col.id ===
                                                       "progress" ? (
                                                       // ✅ شريط تقدم (Range) من 0% إلى 100%
-                                                      <input
-                                                        type="range"
-                                                        min="0"
-                                                        max="100"
-                                                        value={
-                                                          parseInt(
-                                                            task[col.id]
-                                                          ) || 0
-                                                        }
-                                                        onChange={(e) =>
-                                                          updateTaskField(
-                                                            task.id,
-                                                            col.id,
-                                                            `${e.target.value}%`
-                                                          )
-                                                        }
-                                                      />
+                                                      <div className="progress-container">
+                                                        <div
+                                                          className="progress-bar"
+                                                          style={{
+                                                            width: `${calculateProgress(
+                                                              task.updated,
+                                                              task.date
+                                                            )}%`,
+                                                            backgroundColor:
+                                                              getProgressColor(
+                                                                calculateProgress(
+                                                                  task.updated,
+                                                                  task.date
+                                                                )
+                                                              ),
+                                                          }}
+                                                        >
+                                                          {Math.round(
+                                                            calculateProgress(
+                                                              task.updated,
+                                                              task.date
+                                                            )
+                                                          )}
+                                                          %
+                                                        </div>
+                                                      </div>
                                                     ) : col.id === "budget" ? (
                                                       // ✅ إدخال مبلغ مالي بالدولار
                                                       <input
@@ -373,6 +543,9 @@ export default function Tasks() {
                                                             col.id,
                                                             formattedValue
                                                           );
+                                                        }}
+                                                        style={{
+                                                          textAlign: "center",
                                                         }}
                                                       />
                                                     ) : col.id === "files" ? (
@@ -444,10 +617,10 @@ export default function Tasks() {
                                       ))}
                                       {provided.placeholder}
                                     </tbody>
-                                  </table>
-                                </div>
-                              )}
-                            </Droppable>
+                                  )}
+                                </Droppable>
+                              </table>
+                            </div>
                           )}
 
                           <button

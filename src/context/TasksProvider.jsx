@@ -22,6 +22,10 @@ export default function TasksProvider({ children }) {
   const [deletedItems, setDeletedItems] = useState([]);
   const [hiddenColumns, setHiddenColumns] = useState([]);
 
+  const [showDropdown, setShowDropdown] = useState(null);
+  const [showPriorityDropdown, setShowPriorityDropdown] = useState(null);
+  const [showDatepicker, setShowDatepicker] = useState({});
+
   const [groupToDelete, setGroupToDelete] = useState(null);
   const [showGroupDeletePopup, setShowGroupDeletePopup] = useState(false);
   const [showGroupDeletedMessage, setShowGroupDeletedMessage] = useState(false);
@@ -39,20 +43,21 @@ export default function TasksProvider({ children }) {
     { id: "updated", name: "Last updated", visible: true, width: "120px" },
     { id: "dependent", name: "Dependent On", visible: true, width: "130px" },
     { id: "rating", name: "Rating", visible: true, width: "80px" },
+    { id: "add_column", name: "Add Column", visible: true, width: "80px" },
   ];
 
   const initialTasks = [
     {
       id: "1",
       task: "Task One",
-      status: "To Do",
+      status: "Waiting for review",
       progress: "0%",
       date: "2025-03-15",
       priority: "High",
       notes: "",
       budget: "$1000",
       files: "",
-      timeline: "",
+      timeline: "2025-03-01",
       updated: "2025-03-10",
       dependent: "",
       rating: "5⭐",
@@ -67,7 +72,7 @@ export default function TasksProvider({ children }) {
       notes: "",
       budget: "$2000",
       files: "",
-      timeline: "",
+      timeline: "2025-03-05",
       updated: "2025-03-11",
       dependent: "",
       rating: "4⭐",
@@ -82,7 +87,7 @@ export default function TasksProvider({ children }) {
       notes: "",
       budget: "$1500",
       files: "",
-      timeline: "",
+      timeline: "2025-03-10",
       updated: "2025-03-12",
       dependent: "",
       rating: "5⭐",
@@ -298,7 +303,7 @@ export default function TasksProvider({ children }) {
             notes: lastTask.notes || "",
             budget: "$0",
             files: lastTask.files || "",
-            timeline: lastTask.timeline || "",
+            timeline: new Date().toISOString().split("T")[0],
             updated: new Date().toISOString().split("T")[0],
             dependent: lastTask.dependent || "",
             rating: "0⭐",
@@ -475,22 +480,28 @@ export default function TasksProvider({ children }) {
 
   // سحب وإفلات المجموعات والمهام
   const handleDragEnd = (result) => {
-    if (!result.destination) return; // ✅ إذا لم يكن هناك وجهة، لا تفعل شيئًا
+    if (!result.destination) return;
 
     const { source, destination, type } = result;
 
-    setGroups((prevGroups) => {
-      let updatedGroups = [...prevGroups];
-
-      if (type === "group") {
-        // 🔥 إعادة ترتيب المجموعات
+    if (type === "column") {
+      setColumns((prevColumns) => {
+        const updatedColumns = Array.from(prevColumns);
+        const [movedColumn] = updatedColumns.splice(source.index, 1);
+        updatedColumns.splice(destination.index, 0, movedColumn);
+        return updatedColumns;
+      });
+    } else if (type === "group") {
+      setGroups((prevGroups) => {
+        const updatedGroups = [...prevGroups];
         const [movedGroup] = updatedGroups.splice(source.index, 1);
         updatedGroups.splice(destination.index, 0, movedGroup);
         return updatedGroups;
-      }
+      });
+    } else if (type === "task") {
+      setGroups((prevGroups) => {
+        let updatedGroups = [...prevGroups];
 
-      if (type === "task") {
-        // 🔥 البحث عن المجموعة المصدر والهدف
         const sourceGroupIndex = updatedGroups.findIndex(
           (g) => g.name === source.droppableId
         );
@@ -501,25 +512,20 @@ export default function TasksProvider({ children }) {
         if (sourceGroupIndex === -1 || destinationGroupIndex === -1)
           return prevGroups;
 
-        // ✅ إنشاء نسخة جديدة من المجموعات
         const sourceGroup = { ...updatedGroups[sourceGroupIndex] };
         const destinationGroup = { ...updatedGroups[destinationGroupIndex] };
 
-        // ✅ إنشاء نسخة جديدة من المهام حتى لا يتم تعديل `state` مباشرة
         const sourceTasks = [...sourceGroup.tasks];
         const destinationTasks = [...destinationGroup.tasks];
 
-        // 🔥 استخراج المهمة التي يتم سحبها
         const [movedTask] = sourceTasks.splice(source.index, 1);
         if (!movedTask) return prevGroups;
 
-        // ✅ إذا تم السحب داخل نفس المجموعة، قم فقط بإعادة ترتيب المهام
         if (sourceGroup.name === destinationGroup.name) {
           sourceTasks.splice(destination.index, 0, movedTask);
           sourceGroup.tasks = sourceTasks;
           updatedGroups[sourceGroupIndex] = sourceGroup;
         } else {
-          // ✅ إذا تم نقل المهمة إلى مجموعة أخرى
           destinationTasks.splice(destination.index, 0, movedTask);
           sourceGroup.tasks = sourceTasks;
           destinationGroup.tasks = destinationTasks;
@@ -529,10 +535,8 @@ export default function TasksProvider({ children }) {
         }
 
         return updatedGroups;
-      }
-
-      return prevGroups;
-    });
+      });
+    }
   };
 
   const updateGroupName = (groupIndex, newName) => {
@@ -758,7 +762,12 @@ export default function TasksProvider({ children }) {
       prevGroups.map((group) => ({
         ...group,
         tasks: group.tasks.map((task) =>
-          task.id === taskId ? { ...task, [field]: value } : task
+          task.id === taskId
+            ? {
+                ...task,
+                [field]: value, // ✅ تحديث العمود الصحيح فقط
+              }
+            : task
         ),
       }))
     );
@@ -797,27 +806,113 @@ export default function TasksProvider({ children }) {
     event.preventDefault();
     const startX = event.clientX;
     const columnIndex = columns.findIndex((col) => col.id === columnId);
+    if (columnIndex === -1) return;
+
+    const initialWidth = parseInt(columns[columnIndex].width, 10);
+    let animationFrameId = null; // ✅ استخدام requestAnimationFrame لتحسين الأداء
 
     const handleMouseMove = (moveEvent) => {
       const newWidth = Math.max(
         50,
-        columns[columnIndex].width + (moveEvent.clientX - startX)
+        initialWidth + (moveEvent.clientX - startX)
       );
-      setColumns((prevColumns) =>
-        prevColumns.map((col, index) =>
-          index === columnIndex ? { ...col, width: newWidth } : col
-        )
-      );
+
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+
+      animationFrameId = requestAnimationFrame(() => {
+        setColumns((prevColumns) =>
+          prevColumns.map((col, index) =>
+            index === columnIndex ? { ...col, width: `${newWidth}px` } : col
+          )
+        );
+      });
     };
 
     const handleMouseUp = () => {
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
     };
 
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("mouseup", handleMouseUp);
   };
+
+  const calculateProgress = (updated, dueDate) => {
+    const updatedDate = new Date(updated);
+    const due = new Date(dueDate);
+    const today = new Date();
+
+    if (today < updatedDate) return 0;
+    if (today >= due) return 100;
+
+    const totalDuration = due - updatedDate;
+    const elapsedTime = today - updatedDate;
+
+    return Math.min(100, Math.max(0, (elapsedTime / totalDuration) * 100));
+  };
+
+  const getProgressColor = (progress) => {
+    const colors = [
+      "#ff0000",
+      "#ff3300",
+      "#ff6600",
+      "#ff9900",
+      "#ffcc00",
+      "#ffff00",
+      "#ccff00",
+      "#99ff00",
+      "#66ff00",
+      "#00ff00",
+    ];
+    const index = Math.floor((progress / 100) * (colors.length - 1));
+    return colors[index];
+  };
+
+  const getStatusColor = (status) => {
+    const statusColors = {
+      "Ready to start": "#3498db",
+      "Waiting for review": "#9b59b6",
+      "In Progress": "#FBBF24",
+      "Pending Deploy": "#795548",
+      Done: "#22C55E",
+      Stuck: "#EF4444",
+    };
+    return statusColors[status] || "#D1D5DB"; // لون افتراضي
+  };
+
+  const getPriorityColor = (priority) => {
+    const priorityColors = {
+      Critical: "#e74c3c",
+      High: "#9b59b6",
+      Medium: "#e67e22",
+      Low: "#3498db",
+      "Best Effort": "#34495e",
+      Missing: "#95a5a6",
+    };
+    return priorityColors[priority] || "#D1D5DB";
+  };
+
+  const handleClickOutside = (event) => {
+    if (
+      !event.target.closest(".status-wrapper, .priority-wrapper, .date-wrapper")
+    ) {
+      setShowDropdown(null);
+      setShowPriorityDropdown(null);
+      setShowDatepicker(null);
+    }
+  };
+
+  useEffect(() => {
+    document.addEventListener("click", handleClickOutside);
+    return () => {
+      document.removeEventListener("click", handleClickOutside);
+    };
+  }, []);
 
   return (
     <TasksContext.Provider
@@ -868,6 +963,17 @@ export default function TasksProvider({ children }) {
         startResizing,
         handleColumnContextMenu,
         showHiddenColumnsMenu,
+        calculateProgress,
+        getProgressColor,
+        getStatusColor,
+        getPriorityColor,
+        showPriorityDropdown,
+        setShowPriorityDropdown,
+        showDropdown,
+        setShowDropdown,
+        showDatepicker,
+        setShowDatepicker,
+        
       }}
     >
       {children}
