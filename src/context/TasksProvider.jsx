@@ -20,30 +20,36 @@ export default function TasksProvider({ children }) {
   const [showDeletedMessage, setShowDeletedMessage] = useState(false);
 
   const [deletedItems, setDeletedItems] = useState([]);
-  const [hiddenColumns, setHiddenColumns] = useState([]);
 
   const [showDropdown, setShowDropdown] = useState(null);
   const [showPriorityDropdown, setShowPriorityDropdown] = useState(null);
   const [showDatepicker, setShowDatepicker] = useState({});
+  const [popupFile, setPopupFile] = useState(null);
+  const [updateState, setUpdateState] = useState(0);
+  const [columnContextMenu, setColumnContextMenu] = useState(null);
+  const [editingColumn, setEditingColumn] = useState(null);
+  const [editingColumnValue, setEditingColumnValue] = useState("");
+  const [editingGroup, setEditingGroup] = useState(null);
+  const [showHiddenColumns, setShowHiddenColumns] = useState(false);
 
   const [groupToDelete, setGroupToDelete] = useState(null);
   const [showGroupDeletePopup, setShowGroupDeletePopup] = useState(false);
   const [showGroupDeletedMessage, setShowGroupDeletedMessage] = useState(false);
 
   const initialColumns = [
-    { id: "task", name: "Task", visible: true, width: "180px" },
+    { id: "task", name: "Task", visible: true, width: "200px" },
     { id: "status", name: "Status", visible: true, width: "100px" },
     { id: "progress", name: "Progress", visible: true, width: "150px" },
-    { id: "date", name: "Due Date", visible: true, width: "120px" },
-    { id: "priority", name: "Priority", visible: true, width: "100px" },
+    { id: "date", name: "Due Date", visible: true, width: "130px" },
+    { id: "priority", name: "Priority", visible: true, width: "130px" },
     { id: "notes", name: "Notes", visible: true, width: "180px" },
-    { id: "budget", name: "Budget", visible: true, width: "100px" },
+    { id: "budget", name: "Budget", visible: true, width: "130px" },
     { id: "files", name: "Files", visible: true, width: "140px" },
-    { id: "timeline", name: "Timeline", visible: true, width: "120px" },
-    { id: "updated", name: "Last updated", visible: true, width: "120px" },
-    { id: "dependent", name: "Dependent On", visible: true, width: "130px" },
-    { id: "rating", name: "Rating", visible: true, width: "80px" },
-    { id: "add_column", name: "Add Column", visible: true, width: "80px" },
+    { id: "timeline", name: "Timeline", visible: true, width: "130px" },
+    { id: "updated", name: "Last updated", visible: true, width: "130px" },
+    { id: "dependent", name: "Dependent On", visible: true, width: "170px" },
+    { id: "rating", name: "Rating", visible: true, width: "120px" },
+    { id: "add_column", name: "Add Column", visible: true, width: "50px" },
   ];
 
   const initialTasks = [
@@ -98,70 +104,34 @@ export default function TasksProvider({ children }) {
     {
       name: "Group One",
       tasks: [],
-      columns: [
-        "Select",
-        "Task",
-        "Status",
-        "Progress",
-        "Due Date",
-        "Priority",
-        "Notes",
-        "Budget",
-        "Files",
-        "Timeline",
-        "Last updated",
-        "Dependent On",
-        "Rating",
-      ],
+      columns: JSON.parse(JSON.stringify(initialColumns)), // نسخة مستقلة
     },
     {
       name: "Group Two",
       tasks: [],
-      columns: [
-        "Select",
-        "Task",
-        "Status",
-        "Progress",
-        "Due Date",
-        "Priority",
-        "Notes",
-        "Budget",
-        "Files",
-        "Timeline",
-        "Last updated",
-        "Dependent On",
-        "Rating",
-      ],
+      columns: JSON.parse(JSON.stringify(initialColumns)), // نسخة مستقلة
     },
     {
       name: "Group Three",
       tasks: [],
-      columns: [
-        "Select",
-        "Task",
-        "Status",
-        "Progress",
-        "Due Date",
-        "Priority",
-        "Notes",
-        "Budget",
-        "Files",
-        "Timeline",
-        "Last updated",
-        "Dependent On",
-        "Rating",
-      ],
+      columns: JSON.parse(JSON.stringify(initialColumns)), // نسخة مستقلة
     },
   ];
 
   const [groups, setGroups] = useState(() => {
     const storedGroups = JSON.parse(localStorage.getItem("taskGroups"));
+
     if (
       storedGroups &&
       Array.isArray(storedGroups) &&
       storedGroups.length > 0
     ) {
-      return storedGroups;
+      return storedGroups.map((group) => ({
+        ...group,
+        columns: group.columns
+          ? group.columns
+          : JSON.parse(JSON.stringify(initialColumns)), // ✅ تأكد أن كل مجموعة لديها أعمدة
+      }));
     } else {
       const defaultGroups = [
         {
@@ -170,6 +140,7 @@ export default function TasksProvider({ children }) {
             ...task,
             id: `group1-${task.id}`,
           })),
+          columns: JSON.parse(JSON.stringify(initialColumns)), // ✅ إضافة الأعمدة لكل مجموعة
         },
         {
           name: "Group Two",
@@ -177,6 +148,7 @@ export default function TasksProvider({ children }) {
             ...task,
             id: `group2-${task.id}`,
           })),
+          columns: JSON.parse(JSON.stringify(initialColumns)), // ✅ إضافة الأعمدة لكل مجموعة
         },
         {
           name: "Group Three",
@@ -184,8 +156,10 @@ export default function TasksProvider({ children }) {
             ...task,
             id: `group3-${task.id}`,
           })),
+          columns: JSON.parse(JSON.stringify(initialColumns)), // ✅ إضافة الأعمدة لكل مجموعة
         },
       ];
+
       localStorage.setItem("taskGroups", JSON.stringify(defaultGroups)); // ✅ حفظ القيم الافتراضية
       return defaultGroups;
     }
@@ -200,12 +174,21 @@ export default function TasksProvider({ children }) {
   });
 
   const [tasks, setTasks] = useState(() => {
-    const storedTasks = JSON.parse(localStorage.getItem("tasks_data"));
-    if (storedTasks && Array.isArray(storedTasks) && storedTasks.length > 0) {
-      return storedTasks; // ✅ تحميل البيانات المحفوظة في `localStorage` إن وجدت
+    const storedTasks = JSON.parse(localStorage.getItem("tasks_data")) || [];
+
+    if (Array.isArray(storedTasks) && storedTasks.length > 0) {
+      return storedTasks.map((task) => ({
+        ...task,
+        files: Array.isArray(task.files) ? task.files : [], // ✅ تأكد أن `files` مصفوفة
+      }));
     } else {
-      localStorage.setItem("tasks_data", JSON.stringify(initialTasks)); // ✅ تخزين المهام الافتراضية في `localStorage`
-      return initialTasks;
+      const initializedTasks = initialTasks.map((task) => ({
+        ...task,
+        files: [],
+      }));
+
+      localStorage.setItem("tasks_data", JSON.stringify(initializedTasks)); // ✅ حفظ البيانات المعدلة
+      return initializedTasks;
     }
   });
 
@@ -214,9 +197,7 @@ export default function TasksProvider({ children }) {
   }, [columns]);
 
   useEffect(() => {
-    if (tasks.length > 0) {
-      localStorage.setItem("tasks_data", JSON.stringify(tasks));
-    }
+    localStorage.setItem("tasks_data", JSON.stringify(tasks));
   }, [tasks]);
 
   useEffect(() => {
@@ -782,26 +763,6 @@ export default function TasksProvider({ children }) {
     menu.dataset.columnId = columnId;
   };
 
-  const hideColumn = () => {
-    const columnId = document.getElementById("column-context-menu").dataset
-      .columnId;
-    setHiddenColumns((prev) => [...prev, columnId]);
-    document.getElementById("column-context-menu").style.display = "none";
-  };
-
-  const showHiddenColumnsMenu = (event) => {
-    event.preventDefault();
-    const menu = document.getElementById("hidden-columns-menu");
-    menu.style.top = `${event.pageY}px`;
-    menu.style.left = `${event.pageX}px`;
-    menu.style.display = "block";
-  };
-
-  const restoreColumn = (columnId) => {
-    setHiddenColumns((prev) => prev.filter((id) => id !== columnId));
-    document.getElementById("hidden-columns-menu").style.display = "none";
-  };
-
   const startResizing = (event, columnId) => {
     event.preventDefault();
     const startX = event.clientX;
@@ -899,11 +860,14 @@ export default function TasksProvider({ children }) {
 
   const handleClickOutside = (event) => {
     if (
-      !event.target.closest(".status-wrapper, .priority-wrapper, .date-wrapper")
+      !event.target.closest(
+        ".status-wrapper, .priority-wrapper, .date-wrapper, .column-options"
+      )
     ) {
       setShowDropdown(null);
       setShowPriorityDropdown(null);
       setShowDatepicker(null);
+      setColumnContextMenu(null);
     }
   };
 
@@ -913,6 +877,101 @@ export default function TasksProvider({ children }) {
       document.removeEventListener("click", handleClickOutside);
     };
   }, []);
+
+  const handleFileChange = (event, taskId) => {
+    const files = Array.from(event.target.files);
+
+    if (files.length > 0) {
+      const newFiles = files.map((file) => ({
+        name: file.name,
+        url: URL.createObjectURL(file),
+      }));
+
+      setTasks((prevTasks) => {
+        const updatedTasks = prevTasks.map((task) =>
+          task.id === taskId
+            ? {
+                ...task,
+                files: [...(task.files || []), ...newFiles],
+              }
+            : task
+        );
+
+        // ✅ حفظ البيانات في localStorage بعد التحديث
+        localStorage.setItem("tasks_data", JSON.stringify(updatedTasks));
+
+        return [...updatedTasks];
+      });
+      setUpdateState((prev) => prev + 1);
+    }
+  };
+
+  const removeFile = (taskId, field, index) => {
+    setTasks((prevTasks) =>
+      prevTasks.map((task) => {
+        if (task.id === taskId) {
+          const updatedFiles = [...(task[field] || [])];
+          updatedFiles.splice(index, 1);
+          return {
+            ...task,
+            [field]: updatedFiles,
+          };
+        }
+        return task;
+      })
+    );
+  };
+
+  const hideColumn = (groupName, columnId) => {
+    setGroups((prevGroups) =>
+      prevGroups.map((group) =>
+        group.name === groupName
+          ? {
+              ...group,
+              columns: group.columns.filter((col) => col !== columnId),
+            }
+          : group
+      )
+    );
+    setColumnContextMenu(null); // إغلاق القائمة بعد الإخفاء
+  };
+
+  const updateColumnName = (groupName, columnId, newName) => {
+    setGroups((prevGroups) => {
+      const updatedGroups = prevGroups.map((group) => {
+        if (group.name === groupName) {
+          const updatedColumns = group.columns.map((col) =>
+            col.id === columnId ? { ...col, name: newName } : col
+          );
+
+          return { ...group, columns: updatedColumns };
+        }
+        return group;
+      });
+
+      console.log("Updated Groups:", updatedGroups); // ✅ تأكد أن الاسم يتغير في الحالة
+      localStorage.setItem("taskGroups", JSON.stringify(updatedGroups)); // ✅ تحديث `localStorage`
+
+      return [...updatedGroups]; // ✅ إرجاع نسخة جديدة لإجبار `React` على إعادة التحديث
+    });
+  };
+
+  const toggleColumnVisibility = (groupName, columnId) => {
+    setGroups((prevGroups) =>
+      prevGroups.map((group) =>
+        group.name === groupName
+          ? {
+              ...group,
+              columns: group.columns.map((col) =>
+                col.id === columnId ? { ...col, visible: true } : col
+              ),
+            }
+          : group
+      )
+    );
+
+    setShowHiddenColumns(false); // ✅ إغلاق القائمة بعد اختيار العمود
+  };
 
   return (
     <TasksContext.Provider
@@ -957,12 +1016,8 @@ export default function TasksProvider({ children }) {
         columns,
         setColumns,
         updateTaskField,
-        hiddenColumns,
-        hideColumn,
-        restoreColumn,
         startResizing,
         handleColumnContextMenu,
-        showHiddenColumnsMenu,
         calculateProgress,
         getProgressColor,
         getStatusColor,
@@ -973,7 +1028,24 @@ export default function TasksProvider({ children }) {
         setShowDropdown,
         showDatepicker,
         setShowDatepicker,
-        
+        popupFile,
+        setPopupFile,
+        updateState,
+        handleFileChange,
+        removeFile,
+        hideColumn,
+        columnContextMenu,
+        setColumnContextMenu,
+        updateColumnName,
+        editingColumn,
+        setEditingColumn,
+        editingColumnValue,
+        setEditingColumnValue,
+        editingGroup,
+        setEditingGroup,
+        showHiddenColumns,
+        setShowHiddenColumns,
+        toggleColumnVisibility,
       }}
     >
       {children}

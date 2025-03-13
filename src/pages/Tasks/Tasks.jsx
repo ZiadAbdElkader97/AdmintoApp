@@ -8,8 +8,11 @@ import {
   FaSearch,
   FaChevronDown,
   FaChevronRight,
+  FaEyeSlash,
 } from "react-icons/fa";
 import { IoMdClose } from "react-icons/io";
+import { BsThreeDots } from "react-icons/bs";
+import { MdDriveFileRenameOutline } from "react-icons/md";
 import { useContext } from "react";
 import { TasksContext } from "../../context/TasksContext";
 
@@ -48,12 +51,8 @@ export default function Tasks() {
     handleContextMenu,
     columns,
     updateTaskField,
-    hiddenColumns,
-    hideColumn,
-    restoreColumn,
     startResizing,
     handleColumnContextMenu,
-    showHiddenColumnsMenu,
     calculateProgress,
     getProgressColor,
     getStatusColor,
@@ -64,6 +63,23 @@ export default function Tasks() {
     setShowDropdown,
     showDatepicker,
     setShowDatepicker,
+    setPopupFile,
+    updateState,
+    handleFileChange,
+    removeFile,
+    hideColumn,
+    columnContextMenu,
+    setColumnContextMenu,
+    editingColumn,
+    setEditingColumn,
+    updateColumnName,
+    editingColumnValue,
+    setEditingColumnValue,
+    editingGroup,
+    setEditingGroup,
+    showHiddenColumns,
+    setShowHiddenColumns,
+    toggleColumnVisibility,
   } = useContext(TasksContext);
 
   return (
@@ -182,8 +198,12 @@ export default function Tasks() {
                                           />
                                         </th>
                                         {/* ✅ الأعمدة القابلة للسحب */}
-                                        {columns
-                                          .filter((col) => col.visible)
+                                        {group.columns
+                                          .filter(
+                                            (col) =>
+                                              col.visible ||
+                                              col.id === "add_column"
+                                          )
                                           .map((col, index) => (
                                             <Draggable
                                               key={`column-${group.name}-${col.id}`}
@@ -192,21 +212,209 @@ export default function Tasks() {
                                             >
                                               {(provided) => (
                                                 <th
+                                                  key={col.id}
                                                   ref={provided.innerRef}
                                                   {...provided.draggableProps}
                                                   {...provided.dragHandleProps}
                                                   style={{
                                                     width: col.width,
+                                                    position: "relative",
                                                     cursor: "grab",
                                                   }}
                                                   onContextMenu={(e) =>
+                                                    col.id !== "add_column" &&
                                                     handleColumnContextMenu(
                                                       e,
                                                       col.id
                                                     )
                                                   }
                                                 >
-                                                  {col.name}
+                                                  <div className="col_header">
+                                                    {editingColumn ===
+                                                    `${group.name}-${col.id}` ? (
+                                                      <input
+                                                        ref={inputRef}
+                                                        type="text"
+                                                        className="column-edit-input"
+                                                        value={
+                                                          editingColumnValue
+                                                        }
+                                                        autoFocus
+                                                        onFocus={(e) =>
+                                                          e.target.select()
+                                                        }
+                                                        onChange={(e) =>
+                                                          setEditingColumnValue(
+                                                            e.target.value
+                                                          )
+                                                        }
+                                                        onBlur={() => {
+                                                          if (
+                                                            editingColumnValue.trim() !==
+                                                            ""
+                                                          ) {
+                                                            updateColumnName(
+                                                              editingColumn.replace(
+                                                                /^.*-/,
+                                                                ""
+                                                              ),
+                                                              editingColumnValue
+                                                            );
+                                                          }
+                                                          setEditingColumn(
+                                                            null
+                                                          );
+                                                          setColumnContextMenu(
+                                                            null
+                                                          );
+                                                        }}
+                                                        onKeyDown={(e) => {
+                                                          if (
+                                                            e.key === "Enter"
+                                                          ) {
+                                                            e.preventDefault();
+                                                            if (
+                                                              editingColumnValue.trim() !==
+                                                                "" &&
+                                                              editingGroup
+                                                            ) {
+                                                              updateColumnName(
+                                                                editingGroup,
+                                                                editingColumn.replace(
+                                                                  /^.*-/,
+                                                                  ""
+                                                                ),
+                                                                editingColumnValue
+                                                              );
+                                                            }
+                                                            setEditingColumn(
+                                                              null
+                                                            );
+                                                            setEditingGroup(
+                                                              null
+                                                            );
+                                                            setColumnContextMenu(
+                                                              null
+                                                            );
+                                                          }
+                                                        }}
+                                                      />
+                                                    ) : (
+                                                      <p className="col_name">
+                                                        {col.id ===
+                                                        "add_column" ? (
+                                                          <button
+                                                            className="add-column-btn"
+                                                            onClick={() =>
+                                                              setShowHiddenColumns(
+                                                                true
+                                                              )
+                                                            }
+                                                          >
+                                                            +
+                                                          </button>
+                                                        ) : (
+                                                          col.name
+                                                        )}
+                                                      </p>
+                                                    )}
+                                                    {col.id !==
+                                                      "add_column" && (
+                                                      <i
+                                                        className="column-menu-btn"
+                                                        onClick={(e) => {
+                                                          e.stopPropagation();
+                                                          setColumnContextMenu(
+                                                            columnContextMenu ===
+                                                              `${group.name}-${col.id}`
+                                                              ? null
+                                                              : `${group.name}-${col.id}`
+                                                          );
+                                                        }}
+                                                      >
+                                                        <BsThreeDots />
+                                                      </i>
+                                                    )}
+                                                  </div>
+
+                                                  {showHiddenColumns && (
+                                                    <div className="hidden-columns-menu">
+                                                      <ul>
+                                                        {group.columns
+                                                          .filter(
+                                                            (col) =>
+                                                              !col.visible &&
+                                                              col.id !==
+                                                                "add_column"
+                                                          ) // ✅ عرض الأعمدة المخفية فقط
+                                                          .map((col) => (
+                                                            <li
+                                                              key={col.id}
+                                                              onClick={() =>
+                                                                toggleColumnVisibility(
+                                                                  group.name,
+                                                                  col.id
+                                                                )
+                                                              }
+                                                            >
+                                                              {col.name}
+                                                            </li>
+                                                          ))}
+                                                      </ul>
+                                                      <button
+                                                        onClick={() =>
+                                                          setShowHiddenColumns(
+                                                            false
+                                                          )
+                                                        }
+                                                      >
+                                                        Close
+                                                      </button>
+                                                    </div>
+                                                  )}
+
+                                                  {/* إظهار قائمة الخيارات عند الضغط على الأيقونة */}
+                                                  {columnContextMenu ===
+                                                    `${group.name}-${col.id}` && (
+                                                    <ul className="column-options">
+                                                      <li
+                                                        onClick={() =>
+                                                          hideColumn(
+                                                            group.name,
+                                                            col.id
+                                                          )
+                                                        }
+                                                      >
+                                                        <i>
+                                                          <FaEyeSlash />
+                                                        </i>
+                                                        <p>Hide Column</p>
+                                                      </li>
+                                                      <li
+                                                        onClick={() => {
+                                                          setEditingGroup(
+                                                            group.name
+                                                          );
+                                                          setEditingColumn(
+                                                            `${group.name}-${col.id}`
+                                                          );
+                                                          setEditingColumnValue(
+                                                            col.name
+                                                          );
+                                                          setTimeout(
+                                                            () =>
+                                                              inputRef.current?.select(),
+                                                            0
+                                                          );
+                                                        }}
+                                                      >
+                                                        <i>
+                                                          <MdDriveFileRenameOutline />
+                                                        </i>
+                                                        <p>Rename</p>
+                                                      </li>
+                                                    </ul>
+                                                  )}
                                                   <div
                                                     className="resizer"
                                                     onMouseDown={(e) =>
@@ -219,12 +427,6 @@ export default function Tasks() {
                                           ))}
                                         {provided.placeholder}
                                         {/* ✅ زر "إضافة عمود" */}
-                                        <th
-                                          onClick={showHiddenColumnsMenu}
-                                          className="add_column"
-                                        >
-                                          +
-                                        </th>
                                       </tr>
                                     </thead>
                                   )}
@@ -238,7 +440,7 @@ export default function Tasks() {
                                     >
                                       {group.tasks.map((task, index) => (
                                         <Draggable
-                                          key={`task-${group.name}-${task.id}`}
+                                          key={`${task.id}-${updateState}`}
                                           draggableId={`task-${group.name}-${task.id}`}
                                           index={index}
                                         >
@@ -550,17 +752,107 @@ export default function Tasks() {
                                                       />
                                                     ) : col.id === "files" ? (
                                                       // ✅ إدخال ملف أو صورة
-                                                      <input
-                                                        type="file"
-                                                        onChange={(e) =>
-                                                          updateTaskField(
-                                                            task.id,
-                                                            col.id,
-                                                            e.target.files[0]
-                                                              ?.name || ""
-                                                          )
-                                                        }
-                                                      />
+                                                      <div className="file-upload-wrapper">
+                                                        <div className="file-preview-container">
+                                                          {Array.isArray(
+                                                            task.files
+                                                          ) &&
+                                                            task.files.length >
+                                                              0 &&
+                                                            task.files.map(
+                                                              (file, index) => (
+                                                                <div
+                                                                  key={index}
+                                                                  className="file-preview"
+                                                                >
+                                                                  {file.url &&
+                                                                  (file.name.endsWith(
+                                                                    ".jpg"
+                                                                  ) ||
+                                                                    file.name.endsWith(
+                                                                      ".png"
+                                                                    ) ||
+                                                                    file.name.endsWith(
+                                                                      ".jpeg"
+                                                                    )) ? (
+                                                                    <img
+                                                                      src={
+                                                                        file.url
+                                                                      }
+                                                                      alt={
+                                                                        file.name
+                                                                      }
+                                                                      className="uploaded-thumbnail"
+                                                                      onClick={() =>
+                                                                        setPopupFile(
+                                                                          file.url
+                                                                        )
+                                                                      }
+                                                                    />
+                                                                  ) : (
+                                                                    <span
+                                                                      className="uploaded-file-name"
+                                                                      onClick={() =>
+                                                                        setPopupFile(
+                                                                          file.url
+                                                                        )
+                                                                      }
+                                                                    >
+                                                                      📄{" "}
+                                                                      {
+                                                                        file.name
+                                                                      }
+                                                                    </span>
+                                                                  )}
+
+                                                                  <button
+                                                                    className="delete-btn"
+                                                                    onClick={() =>
+                                                                      removeFile(
+                                                                        task.id,
+                                                                        "files",
+                                                                        index
+                                                                      )
+                                                                    }
+                                                                  >
+                                                                    ❌
+                                                                  </button>
+                                                                </div>
+                                                              )
+                                                            )}
+
+                                                          <div
+                                                            className="file-upload-button"
+                                                            onClick={() => {
+                                                              if (task?.id) {
+                                                                document
+                                                                  .getElementById(
+                                                                    `fileInput-${task.id}`
+                                                                  )
+                                                                  .click();
+                                                              }
+                                                            }}
+                                                          >
+                                                            ➕
+                                                          </div>
+                                                        </div>
+
+                                                        <input
+                                                          id={`fileInput-${task.id}`}
+                                                          type="file"
+                                                          style={{
+                                                            display: "none",
+                                                          }}
+                                                          accept="image/*, .pdf, .doc, .docx"
+                                                          multiple
+                                                          onChange={(event) =>
+                                                            handleFileChange(
+                                                              event,
+                                                              task.id
+                                                            )
+                                                          }
+                                                        />
+                                                      </div>
                                                     ) : col.id === "rating" ? (
                                                       // ✅ تقييم بالنجوم (Select)
                                                       <select
@@ -593,6 +885,9 @@ export default function Tasks() {
                                                           5 ⭐
                                                         </option>
                                                       </select>
+                                                    ) : col.id ===
+                                                      "add_column" ? (
+                                                      <span className="disabled-cell"></span>
                                                     ) : (
                                                       // ✅ إدخال افتراضي لأي عمود آخر
                                                       <input
@@ -747,22 +1042,6 @@ export default function Tasks() {
               </div>
             </div>
           )}
-
-          <div id="column-context-menu" className="hide_context_menu">
-            <ul>
-              <li onClick={hideColumn}>Hidden Column</li>
-            </ul>
-          </div>
-
-          <div id="hidden-columns-menu" className="hide_context_menu">
-            <ul>
-              {hiddenColumns.map((colId) => (
-                <li key={colId} onClick={() => restoreColumn(colId)}>
-                  {columns.find((col) => col.id === colId)?.name}
-                </li>
-              ))}
-            </ul>
-          </div>
         </div>
       </div>
     </div>
