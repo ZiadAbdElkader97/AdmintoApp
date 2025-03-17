@@ -125,14 +125,19 @@
 /* Table Styling */
 
 .table-container {
-  width: 100%;
+  position: relative;
+  width: auto;
+  max-width: 100%;
   overflow: visible !important;
+  display: flex;
+  justify-content: flex-start;
 }
 
 .tasks-table {
   display: block;
-  width: max-content;
-  min-width: 100%;
+  width: auto;
+  max-width: 100%;
+  min-width: fit-content;
   background: #31334f;
   margin-bottom: 10px;
   border-collapse: collapse;
@@ -210,6 +215,15 @@ th .resizer:hover {
   display: flex;
   align-items: center;
   justify-content: space-around;
+}
+
+th.hidden, td.hidden {
+  display: none !important;
+  width: 0px !important;
+  min-width: 0px !important;
+  max-width: 0px !important;
+  padding: 0 !important;
+  border: none !important;
 }
 
 /* Task Input Section */
@@ -690,7 +704,7 @@ td {
   font-size: 20px;
 }
 
-.delete-btn {
+.delete-btn2 {
   position: absolute;
   top: -5px;
   right: -5px;
@@ -702,7 +716,7 @@ td {
   visibility: hidden;
 }
 
-.file-preview:hover .delete-btn {
+.file-preview:hover .delete-btn2 {
   visibility: visible;
 }
 
@@ -813,4 +827,49 @@ th:hover .column-menu-btn {
 
 .column-edit-input:focus {
   border-color: #0056b3;
+}
+
+
+.hidden-columns-menu {
+  display: block;
+  min-width: 150px;
+  position: absolute;
+  background: #31334f;
+  border-radius: 5px;
+  padding: 10px;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+}
+
+.hidden-columns-menu .close_hidden_btn {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  background: none;
+  padding: 5px;
+  border: none;
+  color: white;
+  font-size: 18px;
+  cursor: pointer;
+}
+.hidden-columns-menu .close_hidden_btn:hover {
+  color: red;
+  transition: 0.3s;
+}
+
+.hidden-columns-menu ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.hidden-columns-menu li {
+  padding: 8px 12px;
+  transition: 0.3s;
+  color: #fff;
+  cursor: pointer;
+}
+
+.hidden-columns-menu li:hover {
+  background: #41445d;
 }

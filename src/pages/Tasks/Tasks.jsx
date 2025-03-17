@@ -49,10 +49,8 @@ export default function Tasks() {
     toggleGroup,
     contextMenuOptions,
     handleContextMenu,
-    columns,
     updateTaskField,
     startResizing,
-    handleColumnContextMenu,
     calculateProgress,
     getProgressColor,
     getStatusColor,
@@ -127,8 +125,8 @@ export default function Tasks() {
                 >
                   {groups.map((group, index) => (
                     <Draggable
-                      key={`group-${group.name}`}
-                      draggableId={`group-${group.name}`}
+                      key={`${group.id}-${updateState}`}
+                      draggableId={group.id}
                       index={index}
                     >
                       {(provided) => (
@@ -141,7 +139,7 @@ export default function Tasks() {
                             className="group-header"
                             {...provided.dragHandleProps} // ✅ يسمح بسحب المجموعة
                             onContextMenu={(e) =>
-                              handleContextMenu(e, "group", null, group.name)
+                              handleContextMenu(e, "group", null, group.id)
                             }
                           >
                             <i
@@ -172,7 +170,7 @@ export default function Tasks() {
                             <div className="table-container">
                               <table className="tasks-table">
                                 <Droppable
-                                  droppableId={`columns-${group.name}`}
+                                  droppableId={`columns-${group.id}`}
                                   direction="horizontal"
                                   type="column"
                                 >
@@ -199,20 +197,19 @@ export default function Tasks() {
                                         </th>
                                         {/* ✅ الأعمدة القابلة للسحب */}
                                         {group.columns
-                                          .filter(
-                                            (col) =>
-                                              col.visible ||
-                                              col.id === "add_column"
-                                          )
+                                          .filter((col) => !col.hidden)
                                           .map((col, index) => (
                                             <Draggable
-                                              key={`column-${group.name}-${col.id}`}
-                                              draggableId={`column-${group.name}-${col.id}`}
+                                              key={`column-${group.id}-${col.id}`}
+                                              draggableId={`column-${group.id}-${col.id}`}
                                               index={index}
                                             >
                                               {(provided) => (
                                                 <th
                                                   key={col.id}
+                                                  className={
+                                                    col.hidden ? "hidden" : ""
+                                                  }
                                                   ref={provided.innerRef}
                                                   {...provided.draggableProps}
                                                   {...provided.dragHandleProps}
@@ -221,17 +218,10 @@ export default function Tasks() {
                                                     position: "relative",
                                                     cursor: "grab",
                                                   }}
-                                                  onContextMenu={(e) =>
-                                                    col.id !== "add_column" &&
-                                                    handleColumnContextMenu(
-                                                      e,
-                                                      col.id
-                                                    )
-                                                  }
                                                 >
                                                   <div className="col_header">
                                                     {editingColumn ===
-                                                    `${group.name}-${col.id}` ? (
+                                                    `${group.id}-${col.id}` ? (
                                                       <input
                                                         ref={inputRef}
                                                         type="text"
@@ -305,11 +295,12 @@ export default function Tasks() {
                                                         "add_column" ? (
                                                           <button
                                                             className="add-column-btn"
-                                                            onClick={() =>
+                                                            onClick={(e) => {
+                                                              e.stopPropagation();
                                                               setShowHiddenColumns(
                                                                 true
-                                                              )
-                                                            }
+                                                              );
+                                                            }}
                                                           >
                                                             +
                                                           </button>
@@ -326,9 +317,9 @@ export default function Tasks() {
                                                           e.stopPropagation();
                                                           setColumnContextMenu(
                                                             columnContextMenu ===
-                                                              `${group.name}-${col.id}`
+                                                              `${group.id}-${col.id}`
                                                               ? null
-                                                              : `${group.name}-${col.id}`
+                                                              : `${group.id}-${col.id}`
                                                           );
                                                         }}
                                                       >
@@ -337,50 +328,14 @@ export default function Tasks() {
                                                     )}
                                                   </div>
 
-                                                  {showHiddenColumns && (
-                                                    <div className="hidden-columns-menu">
-                                                      <ul>
-                                                        {group.columns
-                                                          .filter(
-                                                            (col) =>
-                                                              !col.visible &&
-                                                              col.id !==
-                                                                "add_column"
-                                                          ) // ✅ عرض الأعمدة المخفية فقط
-                                                          .map((col) => (
-                                                            <li
-                                                              key={col.id}
-                                                              onClick={() =>
-                                                                toggleColumnVisibility(
-                                                                  group.name,
-                                                                  col.id
-                                                                )
-                                                              }
-                                                            >
-                                                              {col.name}
-                                                            </li>
-                                                          ))}
-                                                      </ul>
-                                                      <button
-                                                        onClick={() =>
-                                                          setShowHiddenColumns(
-                                                            false
-                                                          )
-                                                        }
-                                                      >
-                                                        Close
-                                                      </button>
-                                                    </div>
-                                                  )}
-
                                                   {/* إظهار قائمة الخيارات عند الضغط على الأيقونة */}
                                                   {columnContextMenu ===
-                                                    `${group.name}-${col.id}` && (
+                                                    `${group.id}-${col.id}` && (
                                                     <ul className="column-options">
                                                       <li
                                                         onClick={() =>
                                                           hideColumn(
-                                                            group.name,
+                                                            group.id,
                                                             col.id
                                                           )
                                                         }
@@ -396,7 +351,7 @@ export default function Tasks() {
                                                             group.name
                                                           );
                                                           setEditingColumn(
-                                                            `${group.name}-${col.id}`
+                                                            `${group.id}-${col.id}`
                                                           );
                                                           setEditingColumnValue(
                                                             col.name
@@ -446,6 +401,7 @@ export default function Tasks() {
                                         >
                                           {(provided) => (
                                             <tr
+                                              key={task.id}
                                               ref={provided.innerRef}
                                               {...provided.draggableProps}
                                               {...provided.dragHandleProps}
@@ -479,17 +435,11 @@ export default function Tasks() {
                                                 />
                                               </td>
                                               {/* ✅ تخصيص نوع الإدخال لكل عمود */}
-                                              {columns
-                                                .filter(
-                                                  (col, index, self) =>
-                                                    index ===
-                                                      self.findIndex(
-                                                        (c) => c.id === col.id
-                                                      ) && col.visible
-                                                )
-                                                .map((col, colIndex) => (
+                                              {group.columns
+                                                .filter((col) => !col.hidden)
+                                                .map((col) => (
                                                   <td
-                                                    key={colIndex}
+                                                    key={col.id}
                                                     style={{
                                                       width: col.width,
                                                       backgroundColor:
@@ -806,7 +756,7 @@ export default function Tasks() {
                                                                   )}
 
                                                                   <button
-                                                                    className="delete-btn"
+                                                                    className="delete-btn2"
                                                                     onClick={() =>
                                                                       removeFile(
                                                                         task.id,
@@ -1040,6 +990,40 @@ export default function Tasks() {
                   </i>
                 </button>
               </div>
+            </div>
+          )}
+
+          {showHiddenColumns && (
+            <div className="hidden-columns-menu">
+              <button
+                className="close_hidden_btn"
+                onClick={() => setShowHiddenColumns(false)}
+              >
+                <IoMdClose />
+              </button>
+
+              <ul>
+                {groups
+                  .flatMap((group) =>
+                    group.columns
+                      .filter((col) => col.hidden)
+                      .map((col) => ({
+                        ...col,
+                        groupId: group.id,
+                      }))
+                  ) // ✅ جلب جميع الأعمدة المخفية عبر جميع المجموعات
+                  .map((col) => (
+                    <li
+                      key={col.id}
+                      onClick={() => {
+                        toggleColumnVisibility(col.groupId, col.id);
+                        setShowHiddenColumns(false); // ✅ إغلاق القائمة بعد اختيار العمود
+                      }}
+                    >
+                      {col.name}
+                    </li>
+                  ))}
+              </ul>
             </div>
           )}
         </div>

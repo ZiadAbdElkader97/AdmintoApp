@@ -119,15 +119,12 @@ export default function TasksProvider({ children }) {
   ];
 
   const [groups, setGroups] = useState(() => {
-    const storedGroups = JSON.parse(localStorage.getItem("taskGroups"));
+    const storedGroups = JSON.parse(localStorage.getItem("taskGroups")) || [];
 
-    if (
-      storedGroups &&
-      Array.isArray(storedGroups) &&
-      storedGroups.length > 0
-    ) {
-      return storedGroups.map((group) => ({
+    if (Array.isArray(storedGroups) && storedGroups.length > 0) {
+      return storedGroups.map((group, index) => ({
         ...group,
+        id: group.id || `group-${Date.now()}-${index}`, // ✅ تأكد من أن كل مجموعة لها ID فريد
         columns: group.columns
           ? group.columns
           : JSON.parse(JSON.stringify(initialColumns)), // ✅ تأكد أن كل مجموعة لديها أعمدة
@@ -135,32 +132,35 @@ export default function TasksProvider({ children }) {
     } else {
       const defaultGroups = [
         {
+          id: `group-${Date.now()}-1`,
           name: "Group One",
           tasks: initialTasks.map((task) => ({
             ...task,
             id: `group1-${task.id}`,
           })),
-          columns: JSON.parse(JSON.stringify(initialColumns)), // ✅ إضافة الأعمدة لكل مجموعة
+          columns: JSON.parse(JSON.stringify(initialColumns)),
         },
         {
+          id: `group-${Date.now()}-2`,
           name: "Group Two",
           tasks: initialTasks.map((task) => ({
             ...task,
             id: `group2-${task.id}`,
           })),
-          columns: JSON.parse(JSON.stringify(initialColumns)), // ✅ إضافة الأعمدة لكل مجموعة
+          columns: JSON.parse(JSON.stringify(initialColumns)),
         },
         {
+          id: `group-${Date.now()}-3`,
           name: "Group Three",
           tasks: initialTasks.map((task) => ({
             ...task,
             id: `group3-${task.id}`,
           })),
-          columns: JSON.parse(JSON.stringify(initialColumns)), // ✅ إضافة الأعمدة لكل مجموعة
+          columns: JSON.parse(JSON.stringify(initialColumns)),
         },
       ];
 
-      localStorage.setItem("taskGroups", JSON.stringify(defaultGroups)); // ✅ حفظ القيم الافتراضية
+      localStorage.setItem("taskGroups", JSON.stringify(defaultGroups));
       return defaultGroups;
     }
   });
@@ -355,24 +355,23 @@ export default function TasksProvider({ children }) {
     showDeleteNotification("Task"); // ✅ عرض الإشعار
   };
 
-  const deleteGroup = (groupName) => {
-    const group = groups.find((g) => g.name === groupName);
+  const deleteGroup = (groupId) => {
+    const group = groups.find((g) => g.id === groupId);
     if (!group) return;
-    setGroupToDelete({ groupName, group });
+
+    setGroupToDelete({ groupId, group }); // ✅ حفظ ID المجموعة المطلوب حذفها
     setShowGroupDeletePopup(true);
   };
 
   const confirmDeleteGroup = () => {
     if (!groupToDelete) return;
 
-    const groupIndex = groups.findIndex(
-      (g) => g.name === groupToDelete.groupName
-    );
+    const groupIndex = groups.findIndex((g) => g.id === groupToDelete.groupId);
     if (groupIndex === -1) return;
 
     // ✅ حفظ المجموعة كاملةً بكل بياناتها
     const groupToRestore = groups.find(
-      (group) => group.name === groupToDelete.groupName
+      (group) => group.id === groupToDelete.groupId
     );
     if (!groupToRestore) return;
 
@@ -380,12 +379,12 @@ export default function TasksProvider({ children }) {
       ...prev,
       {
         type: "Group",
-        data: { ...groupToDelete, id: groupToDelete.id || Date.now() },
+        data: { ...groupToDelete, id: groupToDelete.id },
       }, // ✅ تأكد أن `id` موجود
     ]);
 
     setGroups((prevGroups) =>
-      prevGroups.filter((g) => g.name !== groupToDelete.groupName)
+      prevGroups.filter((g) => g.id !== groupToDelete.groupId)
     );
 
     setShowGroupDeletePopup(false);
@@ -434,29 +433,24 @@ export default function TasksProvider({ children }) {
 
   const addGroup = () => {
     const groupName = prompt("Enter group name:");
-    if (!groupName) return; // إذا لم يتم إدخال اسم، لا تقم بإنشاء المجموعة
+    if (!groupName) return; // إذا لم يتم إدخال اسم، لا تضف المجموعة
 
     const newGroup = {
       name: groupName,
-      tasks: [],
-      columns: [
-        "Select",
-        "Task",
-        "Status",
-        "Progress",
-        "Due Date",
-        "Priority",
-        "Notes",
-        "Budget",
-        "Files",
-        "Timeline",
-        "Last updated",
-        "Dependent On",
-        "Rating",
-      ],
+      tasks: initialTasks.map((task) => ({
+        ...task,
+        id: `${groupName}-${task.id}`, // ✅ التأكد من أن كل مهمة لها معرف فريد
+      })),
+      columns: JSON.parse(JSON.stringify(initialColumns)), // ✅ نسخ الأعمدة الافتراضية
     };
 
     setGroups((prevGroups) => [...prevGroups, newGroup]);
+
+    // ✅ جعل المجموعة الجديدة مفتوحة تلقائيًا
+    setExpandedGroups((prev) => ({
+      ...prev,
+      [groupName]: true,
+    }));
   };
 
   // سحب وإفلات المجموعات والمهام
@@ -555,40 +549,28 @@ export default function TasksProvider({ children }) {
     );
   };
 
-  const duplicateGroup = (groupName) => {
+  const duplicateGroup = (groupId) => {
     setGroups((prevGroups) => {
-      const originalIndex = prevGroups.findIndex((g) => g.name === groupName);
-      if (originalIndex === -1) return prevGroups;
+      const originalIndex = prevGroups.findIndex((g) => g.id === groupId);
+      if (originalIndex === -1) {
+        return prevGroups;
+      }
 
       const originalGroup = prevGroups[originalIndex];
 
-      // ✅ البحث عن أعلى رقم موجود في التسمية الحالية
-      const existingNumbers = prevGroups
-        .map((g) => {
-          const match = g.name.match(/^(.+?) (\d+)$/); // ✅ البحث عن اسم به رقم
-          return match ? { name: match[1], number: Number(match[2]) } : null;
-        })
-        .filter(Boolean)
-        .filter((g) => g.name === groupName) // ✅ تصفية الأسماء المطابقة فقط
-        .map((g) => g.number);
-
-      const nextNumber =
-        existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
-      const newGroupName = `${groupName} ${nextNumber}`;
-
       const newGroup = {
         ...originalGroup,
-        name: newGroupName,
-        id: Date.now(),
+        id: `group-${Date.now()}-${Math.random()}`, // معرف فريد
+        name: `${originalGroup.name}`,
         tasks: originalGroup.tasks.map((task) => ({
           ...task,
-          id: Date.now() + Math.random(), // ✅ تعيين ID جديد لكل مهمة
+          id: `task-${Date.now()}-${Math.random()}`,
         })),
-        columns: [...originalGroup.columns], // ✅ نسخ جميع الأعمدة أيضًا
+        columns: JSON.parse(JSON.stringify(originalGroup.columns)),
       };
 
       const updatedGroups = [...prevGroups];
-      updatedGroups.splice(originalIndex + 1, 0, newGroup); // ✅ إدراج في نفس الموضع
+      updatedGroups.splice(originalIndex + 1, 0, newGroup);
 
       return updatedGroups;
     });
@@ -650,7 +632,7 @@ export default function TasksProvider({ children }) {
           <li
             className="context-menu-item"
             onClick={() =>
-              duplicateTask(contextMenu.taskId, contextMenu.groupName)
+              duplicateTask(contextMenu.taskId, contextMenu.groupId)
             }
           >
             <i className="context-icon">
@@ -660,9 +642,7 @@ export default function TasksProvider({ children }) {
           </li>
           <li
             className="context-menu-item"
-            onClick={() =>
-              archiveTask(contextMenu.taskId, contextMenu.groupName)
-            }
+            onClick={() => archiveTask(contextMenu.taskId, contextMenu.groupId)}
           >
             <i className="context-icon">
               <FaArchive />
@@ -671,9 +651,7 @@ export default function TasksProvider({ children }) {
           </li>
           <li
             className="context-menu-item delete"
-            onClick={() =>
-              deleteTask(contextMenu.taskId, contextMenu.groupName)
-            }
+            onClick={() => deleteTask(contextMenu.taskId, contextMenu.groupId)}
           >
             <i className="context-icon">
               <RiDeleteBinFill />
@@ -685,7 +663,7 @@ export default function TasksProvider({ children }) {
         <>
           <li
             className="context-menu-item"
-            onClick={() => duplicateGroup(contextMenu.groupName)}
+            onClick={() => duplicateGroup(contextMenu.groupId)}
           >
             <i className="context-icon">
               <IoDuplicate />
@@ -694,7 +672,7 @@ export default function TasksProvider({ children }) {
           </li>
           <li
             className="context-menu-item"
-            onClick={() => archiveGroup(contextMenu.groupName)}
+            onClick={() => archiveGroup(contextMenu.groupId)}
           >
             <i className="context-icon">
               <FaArchive />
@@ -703,7 +681,7 @@ export default function TasksProvider({ children }) {
           </li>
           <li
             className="context-menu-item delete"
-            onClick={() => deleteGroup(contextMenu.groupName)}
+            onClick={() => deleteGroup(contextMenu.groupId)}
           >
             <i className="context-icon">
               <RiDeleteBinFill />
@@ -715,7 +693,7 @@ export default function TasksProvider({ children }) {
     </ul>
   ) : null;
 
-  const handleContextMenu = (event, type, taskId = null, groupName = null) => {
+  const handleContextMenu = (event, type, taskId = null, groupId = null) => {
     event.preventDefault();
     event.stopPropagation(); // ✅ منع اختفاء القائمة فورًا
 
@@ -728,7 +706,7 @@ export default function TasksProvider({ children }) {
       y: event.pageY,
       type,
       taskId,
-      groupName,
+      groupId,
     });
   };
 
@@ -752,15 +730,6 @@ export default function TasksProvider({ children }) {
         ),
       }))
     );
-  };
-
-  const handleColumnContextMenu = (event, columnId) => {
-    event.preventDefault();
-    const menu = document.getElementById("column-context-menu");
-    menu.style.top = `${event.pageY}px`;
-    menu.style.left = `${event.pageX}px`;
-    menu.style.display = "block";
-    menu.dataset.columnId = columnId;
   };
 
   const startResizing = (event, columnId) => {
@@ -861,13 +830,14 @@ export default function TasksProvider({ children }) {
   const handleClickOutside = (event) => {
     if (
       !event.target.closest(
-        ".status-wrapper, .priority-wrapper, .date-wrapper, .column-options"
+        ".status-wrapper, .priority-wrapper, .date-wrapper, .column-options, .add-column-btn, .hidden-columns-menu"
       )
     ) {
       setShowDropdown(null);
       setShowPriorityDropdown(null);
       setShowDatepicker(null);
       setColumnContextMenu(null);
+      setShowHiddenColumns(false);
     }
   };
 
@@ -922,18 +892,37 @@ export default function TasksProvider({ children }) {
     );
   };
 
-  const hideColumn = (groupName, columnId) => {
+  const hideColumn = (groupId, columnId) => {
     setGroups((prevGroups) =>
       prevGroups.map((group) =>
-        group.name === groupName
+        group.id === groupId
           ? {
               ...group,
-              columns: group.columns.filter((col) => col !== columnId),
+              columns: group.columns.map((col) =>
+                col.id === columnId ? { ...col, hidden: true } : col
+              ),
             }
           : group
       )
     );
-    setColumnContextMenu(null); // إغلاق القائمة بعد الإخفاء
+    setColumnContextMenu(null);
+  };
+
+  const toggleColumnVisibility = (groupId, columnId) => {
+    setGroups((prevGroups) =>
+      prevGroups.map((group) => {
+        if (group.id !== groupId) return group;
+
+        // ✅ إعادة العمود إلى ترتيبه الأصلي
+        const updatedColumns = group.columns.map((col) =>
+          col.id === columnId ? { ...col, hidden: false } : col
+        );
+
+        return { ...group, columns: updatedColumns };
+      })
+    );
+
+    setShowHiddenColumns(false); // ✅ إغلاق القائمة بعد اختيار العمود
   };
 
   const updateColumnName = (groupName, columnId, newName) => {
@@ -954,23 +943,6 @@ export default function TasksProvider({ children }) {
 
       return [...updatedGroups]; // ✅ إرجاع نسخة جديدة لإجبار `React` على إعادة التحديث
     });
-  };
-
-  const toggleColumnVisibility = (groupName, columnId) => {
-    setGroups((prevGroups) =>
-      prevGroups.map((group) =>
-        group.name === groupName
-          ? {
-              ...group,
-              columns: group.columns.map((col) =>
-                col.id === columnId ? { ...col, visible: true } : col
-              ),
-            }
-          : group
-      )
-    );
-
-    setShowHiddenColumns(false); // ✅ إغلاق القائمة بعد اختيار العمود
   };
 
   return (
@@ -1017,7 +989,6 @@ export default function TasksProvider({ children }) {
         setColumns,
         updateTaskField,
         startResizing,
-        handleColumnContextMenu,
         calculateProgress,
         getProgressColor,
         getStatusColor,
