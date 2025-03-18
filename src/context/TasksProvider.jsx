@@ -30,7 +30,7 @@ export default function TasksProvider({ children }) {
   const [editingColumn, setEditingColumn] = useState(null);
   const [editingColumnValue, setEditingColumnValue] = useState("");
   const [editingGroup, setEditingGroup] = useState(null);
-  const [showHiddenColumns, setShowHiddenColumns] = useState(false);
+  const [showHiddenColumns, setShowHiddenColumns] = useState({});
 
   const [groupToDelete, setGroupToDelete] = useState(null);
   const [showGroupDeletePopup, setShowGroupDeletePopup] = useState(false);
@@ -40,14 +40,14 @@ export default function TasksProvider({ children }) {
     { id: "task", name: "Task", visible: true, width: "200px" },
     { id: "status", name: "Status", visible: true, width: "100px" },
     { id: "progress", name: "Progress", visible: true, width: "150px" },
-    { id: "date", name: "Due Date", visible: true, width: "130px" },
+    { id: "date", name: "Due Date", visible: true, width: "160px" },
     { id: "priority", name: "Priority", visible: true, width: "130px" },
     { id: "notes", name: "Notes", visible: true, width: "180px" },
     { id: "budget", name: "Budget", visible: true, width: "130px" },
     { id: "files", name: "Files", visible: true, width: "140px" },
-    { id: "timeline", name: "Timeline", visible: true, width: "130px" },
-    { id: "updated", name: "Last updated", visible: true, width: "130px" },
-    { id: "dependent", name: "Dependent On", visible: true, width: "170px" },
+    { id: "timeline", name: "Timeline", visible: true, width: "160px" },
+    { id: "updated", name: "Last updated", visible: true, width: "160px" },
+    { id: "dependent", name: "Dependent On", visible: true, width: "180px" },
     { id: "rating", name: "Rating", visible: true, width: "120px" },
     { id: "add_column", name: "Add Column", visible: true, width: "50px" },
   ];
@@ -734,38 +734,36 @@ export default function TasksProvider({ children }) {
 
   const startResizing = (event, columnId) => {
     event.preventDefault();
+    event.stopPropagation();
+
     const startX = event.clientX;
     const columnIndex = columns.findIndex((col) => col.id === columnId);
     if (columnIndex === -1) return;
 
-    const initialWidth = parseInt(columns[columnIndex].width, 10);
-    let animationFrameId = null; // ✅ استخدام requestAnimationFrame لتحسين الأداء
+    const initialWidth = parseInt(columns[columnIndex].width, 10) || 100; // التأكد من القيمة الافتراضية
+    let newWidth = initialWidth;
+
+    document.body.style.cursor = "col-resize";
 
     const handleMouseMove = (moveEvent) => {
-      const newWidth = Math.max(
-        50,
-        initialWidth + (moveEvent.clientX - startX)
-      );
+      newWidth = Math.max(50, initialWidth + (moveEvent.clientX - startX));
+      console.log("Resizing:", newWidth, "px");
 
-      if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
-      }
-
-      animationFrameId = requestAnimationFrame(() => {
-        setColumns((prevColumns) =>
-          prevColumns.map((col, index) =>
-            index === columnIndex ? { ...col, width: `${newWidth}px` } : col
-          )
-        );
+      setColumns((prevColumns) => {
+        const updatedColumns = [...prevColumns];
+        updatedColumns[columnIndex] = {
+          ...updatedColumns[columnIndex],
+          width: newWidth, // ✅ تخزين كرقم بدلاً من نص
+        };
+        return updatedColumns;
       });
     };
 
     const handleMouseUp = () => {
+      console.log("Mouse Up - Resizing Stopped");
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
-      if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
-      }
+      document.body.style.cursor = "default";
     };
 
     document.addEventListener("mousemove", handleMouseMove);
@@ -905,6 +903,13 @@ export default function TasksProvider({ children }) {
           : group
       )
     );
+
+    // ✅ تأكد أن القائمة لا تتأثر عند الإخفاء
+    setShowHiddenColumns((prev) => ({
+      ...prev,
+      [groupId]: prev[groupId] || false, // يحافظ على حالة الجروب الحالي فقط
+    }));
+
     setColumnContextMenu(null);
   };
 
@@ -913,7 +918,7 @@ export default function TasksProvider({ children }) {
       prevGroups.map((group) => {
         if (group.id !== groupId) return group;
 
-        // ✅ إعادة العمود إلى ترتيبه الأصلي
+        // ✅ إظهار العمود في الجروب المطلوب فقط
         const updatedColumns = group.columns.map((col) =>
           col.id === columnId ? { ...col, hidden: false } : col
         );
@@ -922,7 +927,11 @@ export default function TasksProvider({ children }) {
       })
     );
 
-    setShowHiddenColumns(false); // ✅ إغلاق القائمة بعد اختيار العمود
+    // ✅ إغلاق القائمة لهذا الجروب فقط
+    setShowHiddenColumns((prev) => ({
+      ...prev,
+      [groupId]: false,
+    }));
   };
 
   const updateColumnName = (groupName, columnId, newName) => {

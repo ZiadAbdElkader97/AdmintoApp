@@ -214,7 +214,8 @@ export default function Tasks() {
                                                   {...provided.draggableProps}
                                                   {...provided.dragHandleProps}
                                                   style={{
-                                                    width: col.width,
+                                                    width: `${col.width}px`,
+                                                    minWidth: "50px",
                                                     position: "relative",
                                                     cursor: "grab",
                                                   }}
@@ -298,7 +299,13 @@ export default function Tasks() {
                                                             onClick={(e) => {
                                                               e.stopPropagation();
                                                               setShowHiddenColumns(
-                                                                true
+                                                                (prev) => ({
+                                                                  ...prev,
+                                                                  [group.id]:
+                                                                    !prev[
+                                                                      group.id
+                                                                    ], // ✅ يفتح/يغلق القائمة فقط لهذا الجروب
+                                                                })
                                                               );
                                                             }}
                                                           >
@@ -309,6 +316,7 @@ export default function Tasks() {
                                                         )}
                                                       </p>
                                                     )}
+
                                                     {col.id !==
                                                       "add_column" && (
                                                       <i
@@ -381,8 +389,46 @@ export default function Tasks() {
                                             </Draggable>
                                           ))}
                                         {provided.placeholder}
-                                        {/* ✅ زر "إضافة عمود" */}
                                       </tr>
+
+                                      {showHiddenColumns[group.id] && (
+                                        <div className="hidden-columns-menu">
+                                          <button
+                                            className="close_hidden_btn"
+                                            onClick={() =>
+                                              setShowHiddenColumns(false)
+                                            }
+                                          >
+                                            <IoMdClose />
+                                          </button>
+
+                                          <ul>
+                                            {groups
+                                              .flatMap((group) =>
+                                                group.columns
+                                                  .filter((col) => col.hidden)
+                                                  .map((col) => ({
+                                                    ...col,
+                                                    groupId: group.id,
+                                                  }))
+                                              ) // ✅ جلب جميع الأعمدة المخفية عبر جميع المجموعات
+                                              .map((col) => (
+                                                <li
+                                                  key={col.id}
+                                                  onClick={() => {
+                                                    toggleColumnVisibility(
+                                                      col.groupId,
+                                                      col.id
+                                                    );
+                                                    setShowHiddenColumns(false); // ✅ إغلاق القائمة بعد اختيار العمود
+                                                  }}
+                                                >
+                                                  {col.name}
+                                                </li>
+                                              ))}
+                                          </ul>
+                                        </div>
+                                      )}
                                     </thead>
                                   )}
                                 </Droppable>
@@ -990,40 +1036,6 @@ export default function Tasks() {
                   </i>
                 </button>
               </div>
-            </div>
-          )}
-
-          {showHiddenColumns && (
-            <div className="hidden-columns-menu">
-              <button
-                className="close_hidden_btn"
-                onClick={() => setShowHiddenColumns(false)}
-              >
-                <IoMdClose />
-              </button>
-
-              <ul>
-                {groups
-                  .flatMap((group) =>
-                    group.columns
-                      .filter((col) => col.hidden)
-                      .map((col) => ({
-                        ...col,
-                        groupId: group.id,
-                      }))
-                  ) // ✅ جلب جميع الأعمدة المخفية عبر جميع المجموعات
-                  .map((col) => (
-                    <li
-                      key={col.id}
-                      onClick={() => {
-                        toggleColumnVisibility(col.groupId, col.id);
-                        setShowHiddenColumns(false); // ✅ إغلاق القائمة بعد اختيار العمود
-                      }}
-                    >
-                      {col.name}
-                    </li>
-                  ))}
-              </ul>
             </div>
           )}
         </div>

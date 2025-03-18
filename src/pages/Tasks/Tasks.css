@@ -25,22 +25,23 @@
 }
 
 .add_task {
-  background-color: #007bff;
-  color: white;
-  border: none;
-  padding: 10px 15px;
-  cursor: pointer;
   display: flex;
   align-items: center;
   gap: 5px;
-  border-radius: 5px;
+  background: linear-gradient(135deg, #4b6cb7, #182848);
+  color: white;
+  padding: 12px 18px;
+  font-weight: bold;
+  border: none;
+  border-radius: 6px;
   transition: 0.3s;
   cursor: pointer;
 }
 
 .add_task:hover {
-  background-color: #0056b3;
-  transform: scale(1.05);
+  background: linear-gradient(135deg, #182848, #4b6cb7);
+  transform: scale(1.02);
+  transition: 0.3s;
 }
 
 .add_group {
@@ -48,9 +49,10 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  background-color: #007bff;
+  background: linear-gradient(135deg, #4b6cb7, #182848);
   color: white;
   padding: 10px 15px;
+  margin-bottom: 30px;
   outline: none;
   border: none;
   border-radius: 5px;
@@ -58,7 +60,9 @@
   cursor: pointer;
 }
 .add_group:hover {
-  background-color: #0056b3;
+  background: linear-gradient(135deg, #182848, #4b6cb7);
+  transform: scale(1.02);
+  transition: 0.3s;
 }
 
 .search_icon {
@@ -134,24 +138,42 @@
 }
 
 .tasks-table {
-  display: block;
   width: auto;
   max-width: 100%;
   min-width: fit-content;
-  background: #31334f;
+  background: #232e4e;
   margin-bottom: 10px;
+  border-radius: 12px;
+  /* overflow: hidden; */
+  border-spacing: 0;
   border-collapse: collapse;
   table-layout: auto;
 }
 
-.tasks-table th,
-.tasks-table td {
-  color: #c3c3c3;
-  text-align: center;
-  padding: 8px 12px;
-  border: 1px solid #c3c3c3;
-  white-space: nowrap;
+.tasks-table th {
+  background: #383d4a;
+  color: white;
+  padding: 14px;
+  font-weight: bold;
+  text-align: left;
+  border: 2px solid #4c5161;
 }
+
+/* ✅ تنسيق خلايا البيانات */
+.tasks-table td {
+  background: #2e3340;
+  color: white;
+  text-align: center;
+  padding: 12px;
+  border: 1px solid #4c5161;
+  transition: background 0.2s ease-in-out;
+}
+
+.tasks-table tr:hover td {
+  background: #424755;
+  transition: 0.3s;
+}
+
 
 .tasks-table input {
   background: transparent;
@@ -217,7 +239,8 @@ th .resizer:hover {
   justify-content: space-around;
 }
 
-th.hidden, td.hidden {
+th.hidden,
+td.hidden {
   display: none !important;
   width: 0px !important;
   min-width: 0px !important;
@@ -572,6 +595,7 @@ td {
   background-color: #2a2a3d;
   padding: 6px 10px;
   border-radius: 5px;
+  transition: 0.3s;
 }
 
 .date-wrapper:hover .date-text {
@@ -768,13 +792,14 @@ td {
   transform: translateY(-50%);
   font-size: 16px;
   padding: 3.5px;
+  border-radius: 4px;
   border: none;
   opacity: 0;
   transition: 0.3s;
   cursor: pointer;
 }
 .column-menu-btn:hover {
-  background-color: #45435d;
+  background-color: #4f4e62;
   color: white;
 }
 
@@ -829,24 +854,45 @@ th:hover .column-menu-btn {
   border-color: #0056b3;
 }
 
+.add-column-btn {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: transparent;
+  color: #c3c3c3;
+  font-size: 20px;
+  padding: 0px 6px;
+  border: none;
+  position: sticky;
+  transition: 0.3s;
+  z-index: 10;
+  cursor: pointer;
+}
+.add-column-btn:hover {
+  color: var(--main_color);
+  background-color: #45435d;
+}
 
 .hidden-columns-menu {
   display: block;
   min-width: 150px;
   position: absolute;
+  top: 3px;
+  right: 50px;
   background: #31334f;
   border-radius: 5px;
-  padding: 10px;
+  padding: 15px;
   box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
   z-index: 1000;
 }
 
 .hidden-columns-menu .close_hidden_btn {
   position: absolute;
-  top: 5px;
+  top: 2px;
   right: 5px;
   background: none;
   padding: 5px;
+  margin-left: 5px;
   border: none;
   color: white;
   font-size: 18px;
@@ -861,15 +907,21 @@ th:hover .column-menu-btn {
   list-style: none;
   padding: 0;
   margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
 }
 
 .hidden-columns-menu li {
-  padding: 8px 12px;
-  transition: 0.3s;
   color: #fff;
+  background-color: #434366;
+  padding: 8px 12px;
+  border-radius: 5px;
+  transition: 0.3s;
   cursor: pointer;
 }
 
 .hidden-columns-menu li:hover {
-  background: #41445d;
+  background: #2e3361;
 }
