@@ -9,10 +9,13 @@ import {
   FaChevronDown,
   FaChevronRight,
   FaEyeSlash,
+  FaArchive,
 } from "react-icons/fa";
 import { IoMdClose } from "react-icons/io";
 import { BsThreeDots } from "react-icons/bs";
 import { MdDriveFileRenameOutline } from "react-icons/md";
+import { IoDuplicate } from "react-icons/io5";
+import { RiDeleteBinFill } from "react-icons/ri";
 import { useContext } from "react";
 import { TasksContext } from "../../context/TasksContext";
 
@@ -62,7 +65,6 @@ export default function Tasks() {
     showDatepicker,
     setShowDatepicker,
     setPopupFile,
-    updateState,
     handleFileChange,
     removeFile,
     hideColumn,
@@ -78,6 +80,10 @@ export default function Tasks() {
     showHiddenColumns,
     setShowHiddenColumns,
     toggleColumnVisibility,
+    clearSelection,
+    duplicateTask,
+    archiveTask,
+    deleteTask,
   } = useContext(TasksContext);
 
   return (
@@ -125,7 +131,7 @@ export default function Tasks() {
                 >
                   {groups.map((group, index) => (
                     <Draggable
-                      key={`${group.id}-${updateState}`}
+                      key={group.id}
                       draggableId={group.id}
                       index={index}
                     >
@@ -175,11 +181,11 @@ export default function Tasks() {
                                   type="column"
                                 >
                                   {(provided) => (
-                                    <thead>
-                                      <tr
-                                        ref={provided.innerRef}
-                                        {...provided.droppableProps}
-                                      >
+                                    <thead
+                                      ref={provided.innerRef}
+                                      {...provided.droppableProps}
+                                    >
+                                      <tr>
                                         {/* ✅ Checkbox تحديد الكل */}
                                         <th>
                                           <input
@@ -200,8 +206,8 @@ export default function Tasks() {
                                           .filter((col) => !col.hidden)
                                           .map((col, index) => (
                                             <Draggable
-                                              key={`column-${group.id}-${col.id}`}
                                               draggableId={`column-${group.id}-${col.id}`}
+                                              key={`column-${group.id}-${col.id}`}
                                               index={index}
                                             >
                                               {(provided) => (
@@ -214,7 +220,7 @@ export default function Tasks() {
                                                   {...provided.draggableProps}
                                                   {...provided.dragHandleProps}
                                                   style={{
-                                                    width: `${col.width}px`,
+                                                    width: col.width,
                                                     minWidth: "50px",
                                                     position: "relative",
                                                     cursor: "grab",
@@ -390,50 +396,11 @@ export default function Tasks() {
                                           ))}
                                         {provided.placeholder}
                                       </tr>
-
-                                      {showHiddenColumns[group.id] && (
-                                        <div className="hidden-columns-menu">
-                                          <button
-                                            className="close_hidden_btn"
-                                            onClick={() =>
-                                              setShowHiddenColumns(false)
-                                            }
-                                          >
-                                            <IoMdClose />
-                                          </button>
-
-                                          <ul>
-                                            {groups
-                                              .flatMap((group) =>
-                                                group.columns
-                                                  .filter((col) => col.hidden)
-                                                  .map((col) => ({
-                                                    ...col,
-                                                    groupId: group.id,
-                                                  }))
-                                              ) // ✅ جلب جميع الأعمدة المخفية عبر جميع المجموعات
-                                              .map((col) => (
-                                                <li
-                                                  key={col.id}
-                                                  onClick={() => {
-                                                    toggleColumnVisibility(
-                                                      col.groupId,
-                                                      col.id
-                                                    );
-                                                    setShowHiddenColumns(false); // ✅ إغلاق القائمة بعد اختيار العمود
-                                                  }}
-                                                >
-                                                  {col.name}
-                                                </li>
-                                              ))}
-                                          </ul>
-                                        </div>
-                                      )}
                                     </thead>
                                   )}
                                 </Droppable>
 
-                                <Droppable droppableId={group.name} type="task">
+                                <Droppable droppableId={group.id} type="task">
                                   {(provided) => (
                                     <tbody
                                       ref={provided.innerRef}
@@ -441,8 +408,8 @@ export default function Tasks() {
                                     >
                                       {group.tasks.map((task, index) => (
                                         <Draggable
-                                          key={`${task.id}-${updateState}`}
-                                          draggableId={`task-${group.name}-${task.id}`}
+                                          draggableId={`task-${group.id}-${task.id}`}
+                                          key={task.id}
                                           index={index}
                                         >
                                           {(provided) => (
@@ -914,6 +881,43 @@ export default function Tasks() {
                             </div>
                           )}
 
+                          {showHiddenColumns[group.id] && (
+                            <div className="hidden-columns-menu">
+                              <button
+                                className="close_hidden_btn"
+                                onClick={() => setShowHiddenColumns(false)}
+                              >
+                                <IoMdClose />
+                              </button>
+
+                              <ul>
+                                {groups
+                                  .flatMap((group) =>
+                                    group.columns
+                                      .filter((col) => col.hidden)
+                                      .map((col) => ({
+                                        ...col,
+                                        groupId: group.id,
+                                      }))
+                                  ) // ✅ جلب جميع الأعمدة المخفية عبر جميع المجموعات
+                                  .map((col) => (
+                                    <li
+                                      key={col.id}
+                                      onClick={() => {
+                                        toggleColumnVisibility(
+                                          col.groupId,
+                                          col.id
+                                        );
+                                        setShowHiddenColumns(false); // ✅ إغلاق القائمة بعد اختيار العمود
+                                      }}
+                                    >
+                                      {col.name}
+                                    </li>
+                                  ))}
+                              </ul>
+                            </div>
+                          )}
+
                           <button
                             className="add_task"
                             onClick={() => addTask(group.name)}
@@ -1035,6 +1039,64 @@ export default function Tasks() {
                     <IoMdClose />
                   </i>
                 </button>
+              </div>
+            </div>
+          )}
+
+          {selectedTasks.size > 0 && (
+            <div className="selection-toolbar">
+              <div className="toolbar-left">
+                <div className="selected-count">
+                  <span>{selectedTasks.size}</span>
+                  <p>Task selected</p>
+                </div>
+              </div>
+              <div className="toolbar-actions">
+                <div
+                  className="toolbar-button"
+                  onClick={() => {
+                    if (selectedTasks.size === 0) return;
+                    Array.from(selectedTasks).forEach((task) =>
+                      duplicateTask(task.id, task.groupName)
+                    );
+                  }}
+                >
+                  <i>
+                    <IoDuplicate />
+                  </i>
+                  <p>Duplicate</p>
+                </div>
+                <div
+                  className="toolbar-button"
+                  onClick={() => {
+                    if (selectedTasks.size === 0) return;
+                    Array.from(selectedTasks).forEach((task) =>
+                      archiveTask(task.id, task.groupName)
+                    );
+                  }}
+                >
+                  <i>
+                    <FaArchive />
+                  </i>
+                  <p>Archive</p>
+                </div>
+                <div
+                  className="toolbar-button"
+                  onClick={() => {
+                    if (selectedTasks.size === 0) return;
+                    deleteTask();
+                  }}
+                >
+                  <i>
+                    <RiDeleteBinFill />
+                  </i>
+                  <p>Delete</p>
+                </div>
+              </div>
+              <div className="toolbar-close" onClick={clearSelection}>
+                <i>
+                  <IoMdClose />
+                </i>
               </div>
             </div>
           )}

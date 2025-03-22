@@ -25,7 +25,6 @@ export default function TasksProvider({ children }) {
   const [showPriorityDropdown, setShowPriorityDropdown] = useState(null);
   const [showDatepicker, setShowDatepicker] = useState({});
   const [popupFile, setPopupFile] = useState(null);
-  const [updateState, setUpdateState] = useState(0);
   const [columnContextMenu, setColumnContextMenu] = useState(null);
   const [editingColumn, setEditingColumn] = useState(null);
   const [editingColumnValue, setEditingColumnValue] = useState("");
@@ -219,19 +218,23 @@ export default function TasksProvider({ children }) {
     }
   }, [groups]);
 
-  const handleTaskSelection = (taskId, groupName, isRightClick = false) => {
+  const handleTaskSelection = (taskId, isRightClick = false) => {
     setSelectedTasks((prevSelected) => {
       const updatedSelection = new Set(prevSelected);
 
       if (isRightClick) {
-        // ✅ عند الضغط كليك يمين، يتم تحديد هذه المهمة فقط
-        updatedSelection.clear();
-        updatedSelection.add(taskId);
-      } else {
-        // ✅ عند الضغط العادي، يتم التبديل بين التحديد والإلغاء
+        // عند الضغط بزر الفأرة الأيمن، لا يتم إلغاء تحديد كل المهام، فقط تبديل المهمة المحددة
         if (updatedSelection.has(taskId)) {
           updatedSelection.delete(taskId);
         } else {
+          updatedSelection.add(taskId);
+        }
+      } else {
+        // عند الضغط العادي، يتم إعادة تعيين التحديد ليشمل فقط هذه المهمة
+        if (updatedSelection.size === 1 && updatedSelection.has(taskId)) {
+          updatedSelection.clear();
+        } else {
+          updatedSelection.clear();
           updatedSelection.add(taskId);
         }
       }
@@ -253,10 +256,8 @@ export default function TasksProvider({ children }) {
       const updatedSelection = new Set(prevSelected);
 
       if (allSelected) {
-        // ✅ إذا كانت كل المهام محددة، قم بإلغاء تحديدها جميعًا
         allTaskIds.forEach((taskId) => updatedSelection.delete(taskId));
       } else {
-        // ✅ إذا لم تكن كل المهام محددة، قم بتحديدها جميعًا
         allTaskIds.forEach((taskId) => updatedSelection.add(taskId));
       }
 
@@ -297,9 +298,21 @@ export default function TasksProvider({ children }) {
     );
   };
 
-  const deleteTask = (taskId, groupName) => {
-    setTaskToDelete({ taskId, groupName }); // ✅ حفظ المهمة المطلوب حذفها
-    setShowDeletePopup(true); // ✅ فتح نافذة التأكيد أولًا
+  const deleteTask = (taskId) => {
+    let tasksToRemove = [];
+
+    if (taskId) {
+      // ✅ حذف مهمة واحدة فقط عند استخدام القائمة السياقية
+      tasksToRemove = [taskId];
+    } else if (selectedTasks.size > 0) {
+      // ✅ حذف جميع المهام المحددة عند استخدام `selection-toolbar`
+      tasksToRemove = Array.from(selectedTasks);
+    } else {
+      return;
+    }
+
+    setTaskToDelete(tasksToRemove);
+    setShowDeletePopup(true);
   };
 
   const showDeleteNotification = (type) => {
@@ -313,44 +326,35 @@ export default function TasksProvider({ children }) {
   };
 
   const confirmDeleteTask = () => {
-    if (!taskToDelete) return;
+    if (!taskToDelete || taskToDelete.length === 0) return;
 
-    let deletedTask = null; // ✅ تعريف المتغير خارج `setGroups`
-    let taskIndex = -1; // ✅ تعريف `taskIndex` لضمان وجوده
+    let deletedTasks = [];
 
     setGroups((prevGroups) =>
       prevGroups.map((group) => {
-        if (group.name === taskToDelete.groupName) {
-          taskIndex = group.tasks.findIndex(
-            (t) => t.id === taskToDelete.taskId
-          );
-          if (taskIndex === -1) return group;
+        const remainingTasks = group.tasks.filter((task) => {
+          if (taskToDelete.includes(task.id)) {
+            deletedTasks.push({ ...task });
+            return false; // ✅ حذف المهام المتطابقة
+          }
+          return true;
+        });
 
-          deletedTask = group.tasks[taskIndex]; // ✅ حفظ بيانات المهمة المحذوفة
-
-          return {
-            ...group,
-            tasks: group.tasks.filter((t) => t.id !== taskToDelete.taskId),
-          };
-        }
-        return group;
+        return { ...group, tasks: remainingTasks };
       })
     );
 
-    if (deletedTask) {
-      setDeletedItems((prev) => [
-        ...prev,
-        {
-          type: "Task",
-          data: {
-            ...deletedTask, // ✅ حفظ كل بيانات المهمة الفعلية
-            groupName: taskToDelete.groupName, // ✅ تأكيد حفظ اسم المجموعة
-            index: taskIndex, // ✅ حفظ موقع المهمة في المجموعة
-          },
-        },
-      ]);
-    }
+    // ✅ إضافة المهام إلى سلة المهملات
+    setDeletedItems((prev) => [
+      ...prev,
+      ...deletedTasks.map((task) => ({
+        type: "Task",
+        data: { ...task, deletedAt: Date.now() },
+      })),
+    ]);
 
+    setSelectedTasks(new Set()); // ✅ مسح التحديد بعد الحذف
+    setTaskToDelete([]);
     setShowDeletePopup(false);
     showDeleteNotification("Task"); // ✅ عرض الإشعار
   };
@@ -392,37 +396,34 @@ export default function TasksProvider({ children }) {
   };
 
   const undoDeleteLast = () => {
-    if (!deletedItems || deletedItems.length === 0) return; // ✅ تحقق من أن هناك عناصر محذوفة
+    if (!deletedItems || deletedItems.length === 0) return; // ✅ تحقق من وجود عناصر محذوفة
 
     const lastDeleted = deletedItems[deletedItems.length - 1]; // ✅ احصل على آخر عنصر محذوف
-    setDeletedItems((prev) => prev.slice(0, -1)); // ✅ إزالة العنصر من قائمة المحذوفات
-
     if (!lastDeleted || !lastDeleted.data) return;
 
-    if (lastDeleted.type === "Task") {
-      setGroups((prevGroups) =>
-        prevGroups.map((group) => {
-          if (!group || !Array.isArray(group.tasks)) return group;
+    setDeletedItems((prev) => prev.slice(0, -1)); // ✅ إزالة العنصر من قائمة المحذوفات
 
-          // ✅ إذا كانت المهمة تخص هذه المجموعة، قم بإرجاعها إلى موقعها الأصلي
-          if (group.name === lastDeleted.data.groupName) {
-            const updatedTasks = [...group.tasks];
+    setGroups((prevGroups) => {
+      return prevGroups.map((group) => {
+        if (!group || !Array.isArray(group.tasks)) return group;
 
-            // ✅ إدراج المهمة في مكانها الأصلي بنفس البيانات الأصلية
-            updatedTasks.splice(
-              lastDeleted.data.index ?? updatedTasks.length,
-              0,
-              lastDeleted.data
-            );
+        // ✅ التحقق مما إذا كانت هذه هي المجموعة الأصلية للمهمة
+        if (group.id === lastDeleted.data.previousGroupId) {
+          const updatedTasks = [...group.tasks];
 
-            return { ...group, tasks: updatedTasks };
-          }
-          return group;
-        })
-      );
-    }
+          // ✅ إعادة المهمة إلى موقعها الأصلي
+          const insertIndex =
+            lastDeleted.data.originalIndex ?? updatedTasks.length;
+          updatedTasks.splice(insertIndex, 0, lastDeleted.data);
 
-    setShowDeletedMessage(false);
+          return { ...group, tasks: updatedTasks };
+        }
+
+        return group;
+      });
+    });
+
+    setShowDeletedMessage(false); // ✅ إغلاق إشعار الحذف
   };
 
   useEffect(() => {
@@ -454,64 +455,78 @@ export default function TasksProvider({ children }) {
   };
 
   // سحب وإفلات المجموعات والمهام
+
   const handleDragEnd = (result) => {
     if (!result.destination) return;
 
     const { source, destination, type } = result;
 
-    if (type === "column") {
-      setColumns((prevColumns) => {
-        const updatedColumns = Array.from(prevColumns);
-        const [movedColumn] = updatedColumns.splice(source.index, 1);
-        updatedColumns.splice(destination.index, 0, movedColumn);
-        return updatedColumns;
-      });
-    } else if (type === "group") {
-      setGroups((prevGroups) => {
-        const updatedGroups = [...prevGroups];
-        const [movedGroup] = updatedGroups.splice(source.index, 1);
-        updatedGroups.splice(destination.index, 0, movedGroup);
+    setGroups((prevGroups) => {
+      const updatedGroups = [...prevGroups];
+
+      const moveItem = (sourceArray, destinationArray, fromIndex, toIndex) => {
+        const [movedItem] = sourceArray.splice(fromIndex, 1);
+        if (movedItem) destinationArray.splice(toIndex, 0, movedItem);
+      };
+
+      if (type === "group") {
+        moveItem(updatedGroups, updatedGroups, source.index, destination.index);
         return updatedGroups;
-      });
-    } else if (type === "task") {
-      setGroups((prevGroups) => {
-        let updatedGroups = [...prevGroups];
+      }
 
-        const sourceGroupIndex = updatedGroups.findIndex(
-          (g) => g.name === source.droppableId
+      const sourceGroup = updatedGroups.find(
+        (g) => g.id === source.droppableId
+      );
+      const destinationGroup = updatedGroups.find(
+        (g) => g.id === destination.droppableId
+      );
+
+      if (!sourceGroup || !destinationGroup) return updatedGroups;
+
+      if (type === "column") {
+        const sourceColumns = [...sourceGroup.columns];
+        const destinationColumns =
+          sourceGroup === destinationGroup
+            ? sourceColumns
+            : [...destinationGroup.columns];
+
+        moveItem(
+          sourceColumns,
+          destinationColumns,
+          source.index,
+          destination.index
         );
-        const destinationGroupIndex = updatedGroups.findIndex(
-          (g) => g.name === destination.droppableId
+
+        return updatedGroups.map((group) =>
+          group.id === sourceGroup.id
+            ? { ...group, columns: sourceColumns }
+            : group.id === destinationGroup.id
+            ? { ...group, columns: destinationColumns }
+            : group
         );
+      }
 
-        if (sourceGroupIndex === -1 || destinationGroupIndex === -1)
-          return prevGroups;
-
-        const sourceGroup = { ...updatedGroups[sourceGroupIndex] };
-        const destinationGroup = { ...updatedGroups[destinationGroupIndex] };
-
+      if (type === "task") {
         const sourceTasks = [...sourceGroup.tasks];
-        const destinationTasks = [...destinationGroup.tasks];
+        const destinationTasks =
+          sourceGroup === destinationGroup
+            ? sourceTasks
+            : [...destinationGroup.tasks];
 
-        const [movedTask] = sourceTasks.splice(source.index, 1);
-        if (!movedTask) return prevGroups;
+        moveItem(
+          sourceTasks,
+          destinationTasks,
+          source.index,
+          destination.index
+        );
 
-        if (sourceGroup.name === destinationGroup.name) {
-          sourceTasks.splice(destination.index, 0, movedTask);
-          sourceGroup.tasks = sourceTasks;
-          updatedGroups[sourceGroupIndex] = sourceGroup;
-        } else {
-          destinationTasks.splice(destination.index, 0, movedTask);
-          sourceGroup.tasks = sourceTasks;
+        sourceGroup.tasks = sourceTasks;
+        if (sourceGroup !== destinationGroup)
           destinationGroup.tasks = destinationTasks;
+      }
 
-          updatedGroups[sourceGroupIndex] = sourceGroup;
-          updatedGroups[destinationGroupIndex] = destinationGroup;
-        }
-
-        return updatedGroups;
-      });
-    }
+      return updatedGroups;
+    });
   };
 
   const updateGroupName = (groupIndex, newName) => {
@@ -577,26 +592,30 @@ export default function TasksProvider({ children }) {
   };
 
   const archiveTask = (taskId, groupName) => {
-    setGroups((prevGroups) =>
-      prevGroups.map((group) =>
+    setGroups((prevGroups) => {
+      const updatedGroups = prevGroups.map((group) =>
         group.name === groupName
           ? {
               ...group,
               tasks: group.tasks.filter((t) => t.id !== taskId),
             }
           : group
-      )
-    );
+      );
 
-    const task = groups
-      .find((g) => g.name === groupName)
-      ?.tasks.find((t) => t.id === taskId);
-    if (task) {
-      setTasks((prevTasks) => ({
-        ...prevTasks,
-        trash: [...(prevTasks.trash || []), { ...task, deletedAt: Date.now() }],
-      }));
-    }
+      const task = prevGroups
+        .find((g) => g.name === groupName)
+        ?.tasks.find((t) => t.id === taskId);
+      if (task) {
+        setTasks((prevTasks) => ({
+          ...prevTasks,
+          trash: [
+            ...(prevTasks.trash || []),
+            { ...task, deletedAt: Date.now() },
+          ],
+        }));
+      }
+      return updatedGroups;
+    });
   };
 
   const archiveGroup = (groupName) => {
@@ -695,11 +714,18 @@ export default function TasksProvider({ children }) {
 
   const handleContextMenu = (event, type, taskId = null, groupId = null) => {
     event.preventDefault();
-    event.stopPropagation(); // ✅ منع اختفاء القائمة فورًا
+    event.stopPropagation(); // ✅ منع القائمة من الاختفاء فورًا
 
-    if (type === "task" && taskId) {
-      setSelectedTasks(new Set([taskId])); // ✅ تحديد المهمة فورًا عند الضغط كليك يمين
-    }
+    // ✅ إذا كان هناك مهام محددة، احتفظ بها عند الضغط كليك يمين
+    setSelectedTasks((prevSelected) => {
+      const updatedSelection = new Set(prevSelected);
+
+      if (type === "task" && taskId) {
+        updatedSelection.add(taskId); // ✅ لا تقم بمسح التحديد، فقط أضف المهمة الجديدة إذا لم تكن محددة
+      }
+
+      return updatedSelection;
+    });
 
     setContextMenu({
       x: event.pageX,
@@ -737,37 +763,44 @@ export default function TasksProvider({ children }) {
     event.stopPropagation();
 
     const startX = event.clientX;
-    const columnIndex = columns.findIndex((col) => col.id === columnId);
-    if (columnIndex === -1) return;
 
-    const initialWidth = parseInt(columns[columnIndex].width, 10) || 100; // التأكد من القيمة الافتراضية
-    let newWidth = initialWidth;
+    setColumns((prevColumns) => {
+      const columnIndex = prevColumns.findIndex((col) => col.id === columnId);
+      if (columnIndex === -1) return prevColumns;
 
-    document.body.style.cursor = "col-resize";
+      let initialWidth = parseInt(prevColumns[columnIndex]?.width, 10);
+      if (isNaN(initialWidth) || !initialWidth) initialWidth = 100;
 
-    const handleMouseMove = (moveEvent) => {
-      newWidth = Math.max(50, initialWidth + (moveEvent.clientX - startX));
-      console.log("Resizing:", newWidth, "px");
+      document.body.style.cursor = "col-resize";
 
-      setColumns((prevColumns) => {
-        const updatedColumns = [...prevColumns];
-        updatedColumns[columnIndex] = {
-          ...updatedColumns[columnIndex],
-          width: newWidth, // ✅ تخزين كرقم بدلاً من نص
-        };
-        return updatedColumns;
-      });
-    };
+      const handleMouseMove = (moveEvent) => {
+        const deltaX = moveEvent.clientX - startX;
+        const newWidth = Math.max(50, initialWidth + deltaX);
 
-    const handleMouseUp = () => {
-      console.log("Mouse Up - Resizing Stopped");
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-      document.body.style.cursor = "default";
-    };
+        console.log(`📏 Resizing column ${columnId}: ${newWidth}px`);
 
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
+        setColumns((prevCols) => {
+          const updatedColumns = [...prevCols];
+          updatedColumns[columnIndex] = {
+            ...updatedColumns[columnIndex],
+            width: `${newWidth}px`,
+          };
+          return updatedColumns;
+        });
+      };
+
+      const handleMouseUp = () => {
+        console.log(`✅ Resize finished for column: ${columnId}`);
+        window.removeEventListener("mousemove", handleMouseMove);
+        window.removeEventListener("mouseup", handleMouseUp);
+        document.body.style.cursor = "default";
+      };
+
+      window.addEventListener("mousemove", handleMouseMove);
+      window.addEventListener("mouseup", handleMouseUp);
+
+      return prevColumns;
+    });
   };
 
   const calculateProgress = (updated, dueDate) => {
@@ -870,7 +903,6 @@ export default function TasksProvider({ children }) {
 
         return [...updatedTasks];
       });
-      setUpdateState((prev) => prev + 1);
     }
   };
 
@@ -954,6 +986,10 @@ export default function TasksProvider({ children }) {
     });
   };
 
+  const clearSelection = () => {
+    setSelectedTasks(new Set()); // إعادة تعيين التحديد
+  };
+
   return (
     <TasksContext.Provider
       value={{
@@ -1010,7 +1046,6 @@ export default function TasksProvider({ children }) {
         setShowDatepicker,
         popupFile,
         setPopupFile,
-        updateState,
         handleFileChange,
         removeFile,
         hideColumn,
@@ -1026,6 +1061,8 @@ export default function TasksProvider({ children }) {
         showHiddenColumns,
         setShowHiddenColumns,
         toggleColumnVisibility,
+        clearSelection,
+        archiveTask,
       }}
     >
       {children}
